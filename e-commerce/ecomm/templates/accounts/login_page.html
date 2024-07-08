@@ -1,0 +1,57 @@
+{% extends "base1.html" %}
+{% block content %}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Login</div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    <form method="POST">
+                        {% csrf_token %}
+                        {{ form.non_field_errors }}
+                        <div class="form-group">
+                            {{ form.email.label_tag }}
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.email.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            {{ form.password.label_tag }}
+                            {{ form.password }}
+                            {% if form.password.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.password.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <p class="mt-4"><a href="{% url 'signup' %}" class="text-danger-50 fw-bold m-1"><u>Forgot password?</u></a></p>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Login</button>
+                        <div>
+                            <p class="mt-4">Create an account?<a href="{% url 'signup' %}" class="text-danger-50 fw-bold m-1"><u>Register</u></a></p>
+                        </div>
+                        <button class="btn btn-lg btn-block btn-primary" style="background-color: #dd4b39;" type="submit"><i class="fab fa-google me-2"></i> Sign in with google</button>
+                        <button class="btn btn-lg btn-block btn-primary mb-2" style="background-color: #3b5998;"type="submit"><i class="fab fa-facebook-f me-2"></i>Sign in with facebook</button> 
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
