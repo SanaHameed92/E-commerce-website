@@ -1,0 +1,82 @@
+{% extends "admin_base.html" %}
+{%load static%}
+{%block content%}
+
+<div class="container mt-5">
+    <div class="row tm-content-row">
+      <div class="col-sm-12 col-md-12 col-lg-8 col-xl-8 tm-block-col">
+        <div class="tm-bg-primary-dark tm-block tm-block-products">
+          <div class="tm-product-table-container">
+            <table class="table table-hover tm-table-small tm-product-table">
+              <thead>
+                <tr>
+                  
+                  <th scope="col">PRODUCT TITLE</th>
+                  <th scope="col">ORIGINAL PRICE</th>
+                  <th scope="col">AVAILABILITY</th>
+                  <th scope="col">TRENDING</th>
+                  <th scope="col">&nbsp;</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for product in products %}
+                <tr>
+                    
+                    <td class="tm-product-name">{{ product.title }}</td>
+                    <td>{{ product.original_price }}</td>
+                    <td>{{ product.get_availability_status_display }}</td>
+                    <td>{{ product.trending }}</td>
+                    <td>
+                        <a href="{% url 'edit_product' product.pk %}" class="tm-product-delete-link">
+                            <i class="far fa-edit tm-product-edit-icon"></i>
+                        </a>
+                        <a href="{% url 'delete_product' product.pk %}" class="tm-product-delete-link">
+                            <i class="far fa-trash-alt tm-product-delete-icon"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+               
+              </tbody>
+            </table>
+          </div>
+          <!-- table container -->
+          <a href="{% url 'add_product' %}" class="btn btn-primary btn-block text-uppercase mb-3">Add new product</a>
+
+          
+        </div>
+      </div>
+      <div class="col-sm-12 col-md-12 col-lg-4 col-xl-4 tm-block-col">
+        <div class="tm-bg-primary-dark tm-block tm-block-product-categories">
+          <h2 class="tm-block-title">Product Categories</h2>
+          <div class="tm-product-table-container">
+            <table class="table tm-table-small tm-product-table text-white">
+                <tbody>
+                    {% for category in categories %}
+                    <tr>
+                        <td class="tm-product-name">{{ category.category_name }}</td>
+                        <td class="text-center">
+                            <a href="{% url 'delete_category' category.pk %}" class="tm-product-delete-link">
+                                <i class="far fa-trash-alt tm-product-delete-icon"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                
+            </table>
+          </div>
+          <!-- table container -->
+          <form method="post" class="text-center text-white">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary btn-block text-uppercase mb-3">Add new category</button>
+        </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+
+
+{%endblock%}

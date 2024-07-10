@@ -3,6 +3,8 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import get_user_model,authenticate
 from .models import Account
+from products.models import Product, Category
+
 
 User = get_user_model()
 
@@ -109,3 +111,17 @@ class LoginForm(forms.Form):
 
 
 
+
+
+class ProductForm(forms.ModelForm):
+    class Meta:
+        model = Product
+        fields = [
+            'title', 'description', 'category', 'original_price', 
+            'quantity', 'trending', 'product_image', 'availability_status'
+        ]
+
+class CategoryForm(forms.ModelForm):
+    class Meta:
+        model = Category
+        fields = ['category_name']
