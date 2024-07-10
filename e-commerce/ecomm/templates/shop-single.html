@@ -79,12 +79,23 @@
                 <div class="item">
                     <div class="block-4 text-center">
                         <figure class="block-4-image">
-                            <img src="{{ product.product_image.url }}" alt="Image placeholder" class="img-fluid">
+                            <img src="{{ product.product_image.url }}" alt="Image placeholder" class="img-fluid product-image">
                         </figure>
                         <div class="block-4-text p-4">
                             <h3><a href="#">{{ product.title }}</a></h3>
                             <p class="mb-0">{{product.description}}</p>
                             <p class="text-primary font-weight-bold">${{ product.original_price }}</p>
+                            <div class="rating-container">
+                              <div class="rating">
+                                  {% for i in "12345" %}
+                                  {% if i|add:0 <= product.rating %}
+                                  <i class="fa fa-star"></i>
+                                  {% else %}
+                                  <i class="fa fa-star-o"></i>
+                                  {% endif %}
+                                  {% endfor %}
+                              </div>
+                          </div>
                         </div>
                     </div>
                 </div>

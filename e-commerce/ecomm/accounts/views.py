@@ -1,11 +1,11 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout as auth_logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from .models import Account
-from .forms import AdminLoginForm
-from .forms import SignupForm
-from .forms import LoginForm
+from products.models import Product, Category,ProductImage
+from products.forms import ProductForm, ProductImageForm
+from .forms import AdminLoginForm, SignupForm, LoginForm,CategoryForm 
+
 
 
 def login_page(request):
@@ -51,12 +51,7 @@ def admin_login(request):
     form = AdminLoginForm()
     return render(request, 'accounts/admin_login.html', {'form': form})
 
-@login_required
-def admin_dashboard(request):
-    if request.user.is_authenticated and request.user.is_staff:
-        return render(request, 'accounts/admin_dashboard.html')
-    else:
-        return redirect('product_page:index')
+
 
 def logout_view(request):
     auth_logout(request)
@@ -78,8 +73,8 @@ def signup(request):
             
             if user is not None:
                 login(request, user)  # Log in the user
-                messages.success(request, 'Account created successfully. You are now logged in.')
-                return redirect('product_page:shop')  # Redirect to the shop page after successful login
+                messages.success(request, 'Account created successfully. You can now log In.')
+                return redirect('login')  # Redirect to the shop page after successful login
             else:
                 messages.error(request, 'Account created but unable to log in. Please try logging in manually.')
                 return redirect('login')  # Redirect to the login page if unable to log in automatically
@@ -91,7 +86,100 @@ def signup(request):
         form = SignupForm()
     
     return render(request, 'accounts/signup.html', {'form': form})
+def admin_dashboard(request):
+    if request.user.is_authenticated and request.user.is_staff:
+        return render(request, 'accounts/admin_dashboard.html')
+    else:
+        return redirect('product_page:index')
 
+def admin_products(request):
+    products = Product.objects.all()
+    categories = Category.objects.all()
+    if request.method == 'POST':
+        form = CategoryForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Category added successfully.')
+            return redirect('admin_products')
+        else:
+            messages.error(request, 'Please correct the error below.')
+    else:
+        form = CategoryForm()
+
+    return render(request, 'admin_side/admin_products.html', {
+        'products': products,
+        'categories': categories,
+        'form': form
+    })
+
+def edit_product(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+    categories = Category.objects.all()
+    
+    if request.method == 'POST':
+        form = ProductForm(request.POST, request.FILES, instance=product)
+        image_form = ProductImageForm(request.POST, request.FILES)
+        
+        if form.is_valid():
+            product_instance = form.save(commit=False)
+            product_instance.updated_by = request.user  # Assuming you have an updated_by field
+            product_instance.save()
+
+            if image_form.is_valid():
+                for image in request.FILES.getlist('additional_images'):
+                    ProductImage.objects.create(product=product_instance, image=image)
+
+            messages.success(request, 'Product updated successfully.')
+            return redirect('admin_products')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = ProductForm(instance=product)
+        image_form = ProductImageForm()
+
+    return render(request, 'admin_side/edit_product.html', {'form': form, 'product': product, 'categories': categories, 'image_form': image_form})
+
+
+
+
+
+def delete_product(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+    if request.method == 'POST':
+        product.delete()
+        messages.success(request, 'Product deleted successfully.')
+        return redirect('admin_products')  # Redirect to the product list page or wherever appropriate
+
+    return render(request, 'admin_side/confirm_delete_product.html', {'product': product})
+
+
+def delete_category(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+    
+    if request.method == 'POST':
+        category.delete()
+        messages.success(request, 'Category deleted successfully.')
+        return redirect('admin_products')
+    
+    return render(request, 'admin_side/confirm_delete_category.html', {'category': category})
+
+def add_product(request):
+    if request.method == 'POST':
+        product_form = ProductForm(request.POST)
+        image_form = ProductImageForm(request.POST, request.FILES)
+        if product_form.is_valid() and image_form.is_valid():
+            product = product_form.save(commit=False)
+            product.created_by = request.user  # Assuming you have implemented user authentication
+            product.save()
+            image = image_form.save(commit=False)
+            image.product = product
+            image.save()
+            return redirect('admin_products')  # Redirect to admin products list after adding
+    else:
+        product_form = ProductForm()
+        image_form = ProductImageForm()
+
+    return render(request, 'admin_side/add_products.html', {'product_form': product_form, 'image_form': image_form})
 
 
 def forgotPassword(request):
