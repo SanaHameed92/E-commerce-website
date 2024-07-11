@@ -11,6 +11,7 @@
                     {% csrf_token %}
                     {{ form.as_p }}
                     <button type="submit" class="btn btn-primary btn-block text-uppercase mt-4">Create User</button>
+                    <a href="{% url 'user_page:user_list' %}" class="btn btn-primary btn-block text-uppercase mt-4">Back to User List</a>
                 </form>
             </div>
         </div>

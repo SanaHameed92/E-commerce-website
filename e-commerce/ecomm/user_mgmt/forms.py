@@ -8,4 +8,11 @@ class UserCreationForm(forms.ModelForm):
 
     class Meta:
         model = Account
-        fields = ['first_name', 'last_name', 'username', 'email', 'phone_number','is_admin']
+        fields = ['first_name', 'last_name', 'username', 'email', 'phone_number','is_admin','is_active']
+
+
+
+class UserEditForm(forms.ModelForm):
+    class Meta:
+        model = Account
+        fields = ['first_name', 'last_name', 'email', 'phone_number','is_admin']
