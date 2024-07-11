@@ -30,6 +30,7 @@ ALLOWED_HOSTS = []
 
 
 # Application definition
+SITE_ID = 2
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -42,8 +43,28 @@ INSTALLED_APPS = [
     'accounts',
     'products',
     'user_mgmt',
+    # these apps for checking social authendications 
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google'
     
 ]
+
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google':{
+        'SCOPE':[
+            'profile',
+            'email'
+        ],
+        'AUTH_PARAMS':{"access_type":'online'},
+        'OAUTH_PKCE_ENABLED': True,
+    }
+}
+
+SOCIALACCOUNT_QUERY_EMAIL = True
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -53,6 +74,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'ecomm.urls'
@@ -81,6 +103,7 @@ AUTH_USER_MODEL = 'accounts.Account'
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend', 
     'accounts.backends.MyCustomBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
 
 ]
 
@@ -151,3 +174,13 @@ EMAIL_USE_SSL = False
 EMAIL_HOST_USER = 'sanahameed143@gmail.com'
 EMAIL_HOST_PASSWORD = 'dwao rlpf yncb aeav'
 DEFAULT_FROM_EMAIL = 'sanahameed143@gmail.com'
+
+# defining for google authentication 
+
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend'
+)
+
+LOGIN_REDIRECT_URL ='product_page:shop'
+LOGOUT_REDIRECT_URL ='/'

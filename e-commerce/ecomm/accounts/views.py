@@ -70,7 +70,11 @@ def signup(request):
     if request.method == 'POST':
         form = SignupForm(request.POST)
         if form.is_valid():
-            user = form.save()  # Save the user
+            user = form.save(commit=False)
+            user.set_password(form.cleaned_data['password'])  # Ensure password is hashed
+            user.is_active = True 
+            user.save()
+              # Save the user
             email = form.cleaned_data.get('email')  # Get the email from the form
             raw_password = form.cleaned_data.get('password')  # Get the raw password from the form
             
