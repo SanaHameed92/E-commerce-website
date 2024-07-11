@@ -12,12 +12,7 @@ def index(request):
     return render(request,'index.html')
 
 
-def ex(request):
-    return render(request,'ex.html')
 
-
-def shop(request):
-    return render(request,'shop.html')
 
 
 

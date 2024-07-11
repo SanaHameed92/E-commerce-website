@@ -5,6 +5,15 @@ from django.contrib.auth.decorators import login_required
 from products.models import Product, Category,ProductImage
 from products.forms import ProductForm, ProductImageForm
 from .forms import AdminLoginForm, SignupForm, LoginForm,CategoryForm 
+from django.contrib.auth import get_user_model
+from django.conf import settings
+from .forms import CustomPasswordResetForm, OTPVerificationForm, CustomSetPasswordForm
+from .utils import generate_otp,send_otp_email
+from django.urls import reverse_lazy
+from django.contrib.auth.views import PasswordResetConfirmView
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.contrib.auth.tokens import default_token_generator
 
 
 
@@ -86,6 +95,7 @@ def signup(request):
         form = SignupForm()
     
     return render(request, 'accounts/signup.html', {'form': form})
+
 def admin_dashboard(request):
     if request.user.is_authenticated and request.user.is_staff:
         return render(request, 'accounts/admin_dashboard.html')
@@ -165,7 +175,7 @@ def delete_category(request, pk):
 
 def add_product(request):
     if request.method == 'POST':
-        product_form = ProductForm(request.POST)
+        product_form = ProductForm(request.POST, request.FILES)
         image_form = ProductImageForm(request.POST, request.FILES)
         if product_form.is_valid() and image_form.is_valid():
             product = product_form.save(commit=False)
@@ -182,5 +192,64 @@ def add_product(request):
     return render(request, 'admin_side/add_products.html', {'product_form': product_form, 'image_form': image_form})
 
 
-def forgotPassword(request):
-    return render(request,'accounts/forgotPassword.html')
+
+
+
+
+
+UserModel = get_user_model()
+
+def forgot_password(request):
+    if request.method == 'POST':
+        form = CustomPasswordResetForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            try:
+                user = UserModel.objects.get(email=email)
+                otp = generate_otp()
+                user.otp = otp
+                user.save()
+                send_otp_email(email, otp)
+                messages.success(request, 'OTP has been sent to your email address.')
+                return redirect('verify_otp')
+            except UserModel.DoesNotExist:
+                messages.error(request, 'No account found with this email address.')
+    else:
+        form = CustomPasswordResetForm()
+
+    return render(request, 'accounts/forgot_password.html', {'form': form})
+
+def verify_otp(request):
+    if request.method == 'POST':
+        form = OTPVerificationForm(request.POST)
+        if form.is_valid():
+            otp_entered = form.cleaned_data['otp']
+            try:
+                user = UserModel.objects.get(otp=otp_entered)
+                user.otp = None
+                user.save()
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+                token = default_token_generator.make_token(user)
+                return redirect('password_reset_confirm', uidb64=uid, token=token)
+            except UserModel.DoesNotExist:
+                messages.error(request, "Invalid OTP entered.")
+    else:
+        form = OTPVerificationForm()
+
+    return render(request, 'accounts/verify_otp.html', {'form': form})
+
+
+class CustomPasswordResetConfirmView(PasswordResetConfirmView):
+    template_name = 'accounts/password_reset_confirm.html'
+    success_url = reverse_lazy('login')
+    form_class = CustomSetPasswordForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['uidb64'] = self.kwargs['uidb64']
+        context['token'] = self.kwargs['token']
+        return context
+    
+
+   
+

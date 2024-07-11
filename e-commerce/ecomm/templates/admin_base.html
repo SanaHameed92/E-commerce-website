@@ -52,7 +52,7 @@
                                 </span>
                             </a>
                             <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                <a class="dropdown-item" href="#">Daily Report</a>
+                                <a class="dropdown-item" href="{% url 'user_page:user_list'%}">Users</a>
                                 <a class="dropdown-item" href="#">Weekly Report</a>
                                 <a class="dropdown-item" href="#">Yearly Report</a>
                             </div>
@@ -87,7 +87,7 @@
                     </ul>
                     <ul class="navbar-nav">
                         <li class="nav-item">
-                            <a class="nav-link d-block" href="login.html">
+                            <a class="nav-link d-block" href="{% url 'logout'%} ">
                                 Admin, <b>Logout</b>
                             </a>
                         </li>
