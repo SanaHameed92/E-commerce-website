@@ -4,6 +4,9 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import get_user_model,authenticate
 from .models import Account
 from products.models import Product, Category
+from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
+
+
 
 
 User = get_user_model()
@@ -125,3 +128,17 @@ class CategoryForm(forms.ModelForm):
     class Meta:
         model = Category
         fields = ['category_name']
+
+
+
+class CustomPasswordResetForm(PasswordResetForm):
+    email = forms.EmailField(max_length=254)
+
+class OTPVerificationForm(forms.Form):
+    otp = forms.CharField(max_length=6)
+
+class CustomSetPasswordForm(SetPasswordForm):
+    new_password1 = forms.CharField(label='New password:', widget=forms.PasswordInput)
+    new_password2 = forms.CharField(label='Repeat password:', widget=forms.PasswordInput)
+
+

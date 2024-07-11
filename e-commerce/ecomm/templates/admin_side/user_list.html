@@ -1,0 +1,53 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row tm-content-row">
+        <div class="col-sm-12 col-md-12 col-lg-12 col-xl-12 tm-block-col">
+            <div class="tm-bg-primary-dark tm-block tm-block-products">
+                <div class="tm-product-table-container">
+                    <table class="table table-hover tm-table-small tm-product-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">FIRST NAME</th>
+                                <th scope="col">LAST NAME</th>
+                                <th scope="col">USERNAME</th>
+                                <th scope="col">EMAIL</th>
+                                <th scope="col">PHONE NUMBER</th>
+                                <th scope="col">STATUS</th>
+                                <th scope="col">ACTION</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user.first_name }}</td>
+                                <td>{{ user.last_name }}</td>
+                                <td>{{ user.username }}</td>
+                                <td>{{ user.email }}</td>
+                                <td>{{ user.phone_number }}</td>
+                                <td>
+                                    {% if user.is_active %}
+                                        Active
+                                    {% else %}
+                                        Inactive
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if not user.is_superuser %}
+                                        <a href="{% url 'user_page:user_delete' user.id %}" class="tm-product-delete-link" onclick="return confirm('Are you sure you want to delete this user?');">
+                                            <i class="far fa-trash-alt tm-product-delete-icon"></i>
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <!-- table container -->
+                <a href="{% url 'user_page:user_create' %}" class="btn btn-primary btn-block text-uppercase mb-3">Add new user</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

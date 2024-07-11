@@ -7,13 +7,7 @@
             <div class="card">
                 <div class="card-header">Login</div>
                 <div class="card-body">
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }}">
-                                {{ message }}
-                            </div>
-                        {% endfor %}
-                    {% endif %}
+                    
                     <form method="POST">
                         {% csrf_token %}
                         {{ form.non_field_errors }}
@@ -40,7 +34,7 @@
                             {% endif %}
                         </div>
                         <div>
-                            <p class="mt-4"><a href="{% url 'signup' %}" class="text-danger-50 fw-bold m-1"><u>Forgot password?</u></a></p>
+                            <p class="mt-4"><a href="{% url 'forgot_password' %}" class="text-danger-50 fw-bold m-1"><u>Forgot password?</u></a></p>
                         </div>
                         <button type="submit" class="btn btn-primary">Login</button>
                         <div>
