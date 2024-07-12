@@ -13,7 +13,7 @@ urlpatterns = [
     path('delete/<int:pk>/', views.delete_product, name='delete_product'),
     path('category/<int:pk>/delete/', views.delete_category, name='delete_category'),
     path('forgot-password/', views.forgot_password, name='forgot_password'),
-    path('verify-otp/', views.verify_otp, name='verify_otp'),
+    path('verify-otp/<int:user_id>/<str:scenario>/', views.verify_otp, name='verify_otp'),
     path('reset/<uidb64>/<token>/', views.CustomPasswordResetConfirmView.as_view(), name='password_reset_confirm'),
 
   

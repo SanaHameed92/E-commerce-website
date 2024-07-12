@@ -76,7 +76,11 @@
                                         </div>
                                     </div>
                                     <p class="text-primary font-weight-bold">${{ product.original_price }}</p>
-                                    <p class="text-secondary">{{ product.get_availability_status_display }}</p>
+                                    {% if product.availability_status == 'in_stock' %}
+                                    <p class="text-success font-weight-bold">In Stock</p>
+                                    {% else %}
+                                    <p class="text-danger font-weight-bold">Out of Stock</p>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>

@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout as auth_logout
+from django.contrib.auth import login as auth_login
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from products.models import Product, Category,ProductImage
@@ -14,6 +15,7 @@ from django.contrib.auth.views import PasswordResetConfirmView
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator
+from .models import Account
 
 
 
@@ -72,25 +74,28 @@ def signup(request):
         if form.is_valid():
             user = form.save(commit=False)
             user.set_password(form.cleaned_data['password'])  # Ensure password is hashed
-            user.is_active = True 
+            user.is_active = False
+            user.otp = generate_otp() 
             user.save()
               # Save the user
-            email = form.cleaned_data.get('email')  # Get the email from the form
-            raw_password = form.cleaned_data.get('password')  # Get the raw password from the form
+
+            send_otp_email(user.email, user.otp)
+            #email = form.cleaned_data.get('email')  # Get the email from the form
+            #raw_password = form.cleaned_data.get('password')  # Get the raw password from the form
             
-            print(f"New User Registered - Email: {email}, Password: {raw_password}")
+            #print(f"New User Registered - Email: {email}, Password: {raw_password}")
             
-            user = authenticate(username=email, password=raw_password)  # Authenticate the user
+            #user = authenticate(username=email, password=raw_password)  # Authenticate the user
             
-            print(f"Authenticated User: {user}")
+            #print(f"Authenticated User: {user}")
             
-            if user is not None:
-                login(request, user)  # Log in the user
-                messages.success(request, 'Account created successfully. You can now log In.')
-                return redirect('login')  # Redirect to the shop page after successful login
-            else:
-                messages.error(request, 'Account created but unable to log in. Please try logging in manually.')
-                return redirect('login')  # Redirect to the login page if unable to log in automatically
+            #if user is not None:
+                #login(request, user)  # Log in the user
+            messages.success(request, 'Account created successfully. You can now log In.')
+            return redirect('verify_otp', user_id=user.pk, scenario='signup')  # Redirect to the shop page after successful login
+            #else:
+                #messages.error(request, 'Account created but unable to log in. Please try logging in manually.')
+                #return redirect('login')  # Redirect to the login page if unable to log in automatically
         else:
             for field, errors in form.errors.items():
                 for error in errors:
@@ -159,11 +164,18 @@ def edit_product(request, pk):
 
 def delete_product(request, pk):
     product = get_object_or_404(Product, pk=pk)
+    
     if request.method == 'POST':
-        product.delete()
-        messages.success(request, 'Product deleted successfully.')
+        # Update availability status instead of deleting
+        if product.availability_status == 'in_stock':
+            product.availability_status = 'out_of_stock'
+        else:
+            product.availability_status = 'in_stock'
+        product.save()
+        
+        messages.success(request, f'Availability of "{product.title}" changed successfully.')
         return redirect('admin_products')  # Redirect to the product list page or wherever appropriate
-
+    
     return render(request, 'admin_side/confirm_delete_product.html', {'product': product})
 
 
@@ -197,10 +209,6 @@ def add_product(request):
 
 
 
-
-
-
-
 UserModel = get_user_model()
 
 def forgot_password(request):
@@ -209,38 +217,62 @@ def forgot_password(request):
         if form.is_valid():
             email = form.cleaned_data['email']
             try:
-                user = UserModel.objects.get(email=email)
+                #user = UserModel.objects.get(email=email)
+                user = Account.objects.get(email=email)
                 otp = generate_otp()
                 user.otp = otp
                 user.save()
-                send_otp_email(email, otp)
+
+                #send_otp_email(email, otp)
+                send_otp_email(user.email, user.otp)
                 messages.success(request, 'OTP has been sent to your email address.')
-                return redirect('verify_otp')
-            except UserModel.DoesNotExist:
+                return redirect('verify_otp', user.pk, 'forgot_password')
+            #except UserModel.DoesNotExist:
+            except Account.DoesNotExist:
                 messages.error(request, 'No account found with this email address.')
     else:
         form = CustomPasswordResetForm()
 
     return render(request, 'accounts/forgot_password.html', {'form': form})
 
-def verify_otp(request):
+def verify_otp(request, user_id, scenario):
+    try:
+        user = UserModel.objects.get(pk=user_id)
+    except UserModel.DoesNotExist:
+        messages.error(request, "Invalid user.")
+        return redirect('login')
+    
     if request.method == 'POST':
         form = OTPVerificationForm(request.POST)
         if form.is_valid():
             otp_entered = form.cleaned_data['otp']
-            try:
-                user = UserModel.objects.get(otp=otp_entered)
+            if user.otp == otp_entered:
                 user.otp = None
+                user.is_active = True
                 user.save()
-                uid = urlsafe_base64_encode(force_bytes(user.pk))
-                token = default_token_generator.make_token(user)
-                return redirect('password_reset_confirm', uidb64=uid, token=token)
-            except UserModel.DoesNotExist:
+                if scenario == 'signup':
+                    user.backend = 'django.contrib.auth.backends.ModelBackend'  # Set the authentication backend
+                    auth_login(request, user)
+                    return redirect('login')
+                elif scenario == 'forgot_password':
+                    uid = urlsafe_base64_encode(force_bytes(user.pk))
+                    token = default_token_generator.make_token(user)
+                    return redirect('password_reset_confirm', uidb64=uid, token=token)
+            else:
                 messages.error(request, "Invalid OTP entered.")
+                #user = Account.objects.get(otp=otp_entered)
+                #user.backend = 'django.contrib.auth.backends.ModelBackend'
+                #login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                #uid = urlsafe_base64_encode(force_bytes(user.pk))
+                #token = default_token_generator.make_token(user)
+                #login(request, user)
+                #messages.success(request, 'OTP verified successfully. You are now logged in.')
+                #return redirect('password_reset_confirm', uidb64=uid, token=token)
+               
     else:
-        form = OTPVerificationForm()
+        form = OTPVerificationForm(initial={'scenario': scenario})
 
-    return render(request, 'accounts/verify_otp.html', {'form': form})
+    return render(request, 'accounts/verify_otp.html', {'form': form, 'user': user, 'scenario': scenario})
 
 
 class CustomPasswordResetConfirmView(PasswordResetConfirmView):
