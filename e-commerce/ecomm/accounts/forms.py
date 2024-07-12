@@ -136,6 +136,7 @@ class CustomPasswordResetForm(PasswordResetForm):
 
 class OTPVerificationForm(forms.Form):
     otp = forms.CharField(max_length=6)
+    scenario = forms.CharField(widget=forms.HiddenInput(), required=False)
 
 class CustomSetPasswordForm(SetPasswordForm):
     new_password1 = forms.CharField(label='New password:', widget=forms.PasswordInput)
