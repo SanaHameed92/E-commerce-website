@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404
-from .models import Product, Category, Brand, Size
+from .models import Product, Category, Brand, Size, Color
 from django.core.paginator import Paginator
 from django.shortcuts import render
 from django.http import JsonResponse
@@ -37,13 +37,18 @@ def shop(request):
     page_number = request.GET.get('page')
     product_list = product_paginator.get_page(page_number)
 
-    categories = Category.objects.all()
+    categories = Category.objects.filter(is_active=True)
     brands = Brand.objects.filter(category__category_name=category_name) if category_name else Brand.objects.none()
+
+    sizes = Size.objects.all()
+    colors = Color.objects.all()
 
     context = {
         'products': product_list,
         'categories': categories,
         'brands': brands,
+        'sizes': sizes,
+        'colors': colors,
         'selected_category': category_name,
         'selected_brand': brand_name,
         'selected_color': color,

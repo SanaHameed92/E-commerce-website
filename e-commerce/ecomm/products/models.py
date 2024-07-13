@@ -9,6 +9,7 @@ class Category(models.Model):
     category_name = models.CharField(max_length=50, unique=True)
     description = models.TextField(max_length=255, blank=True)
     cat_image = models.ImageField(upload_to='photos/categories', blank=True)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = 'category'
@@ -20,6 +21,7 @@ class Category(models.Model):
 class Brand(models.Model):
     brand_name = models.CharField(max_length=255)
     category = models.ForeignKey(Category, related_name='brands', on_delete=models.CASCADE)
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return self.brand_name

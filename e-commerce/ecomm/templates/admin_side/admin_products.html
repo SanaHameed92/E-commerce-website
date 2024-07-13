@@ -53,6 +53,7 @@
                 <a href="{% url 'add_product' %}" class="btn btn-primary btn-block text-uppercase mb-3">Add new product</a>
             </div>
         </div>
+    
         <div class="col-sm-12 col-md-12 col-lg-4 col-xl-4 tm-block-col">
             <div class="tm-bg-primary-dark tm-block tm-block-product-categories">
                 <h2 class="tm-block-title">Product Categories</h2>
@@ -61,11 +62,25 @@
                         <tbody>
                             {% for category in categories %}
                             <tr>
-                                <td class="tm-product-name">{{ category.category_name }}</td>
+                                <td>{{ category.category_name }}</td>
                                 <td>
-                                    <a href="{% url 'delete_category' category.pk %}" class="btn btn-danger btn-sm">
-                                        Delete
-                                    </a>
+                                    {% if category.is_active %}
+                                        <span class="text-success">Active</span>
+                                    {% else %}
+                                        <span class="text-danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <form method="post" action="{% url 'delete_category' category.pk %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-warning btn-sm">
+                                            {% if category.is_active %}
+                                                Deactivate
+                                            {% else %}
+                                                Activate
+                                            {% endif %}
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -75,11 +90,54 @@
                 <!-- table container -->
                 <form method="post" class="text-center text-white">
                     {% csrf_token %}
-                    {{ form.as_p }}
+                    {{ category_form.as_p }}
                     <button type="submit" class="btn btn-primary btn-block text-uppercase mb-3">Add new category</button>
                 </form>
             </div>
         </div>
     </div>
-</div>
+    <div class="row tm-content-row">
+        <div class="col-sm-12 col-md-12 col-lg-4 col-xl-6 tm-block-col">
+            <div class="tm-bg-primary-dark tm-block tm-block-product-categories">
+                <h2 class="tm-block-title">Product Brands</h2>
+                <div class="tm-product-table-container">
+                    <table class="table tm-table-small tm-product-table text-white">
+                        <tbody>
+                            {% for brand in brands %}
+                            <tr>
+                                <td class="tm-product-name">{{ brand.brand_name }}</td>
+                                <td>
+                                    {% if brand.is_active %}
+                                        <span class="text-success">Active</span>
+                                    {% else %}
+                                        <span class="text-danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <form method="post" action="{% url 'toggle_brand_status' brand.pk %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-warning btn-sm">
+                                            {% if brand.is_active %}
+                                                Deactivate
+                                            {% else %}
+                                                Activate
+                                            {% endif %}
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <form method="post" class="text-center text-white">
+                    {% csrf_token %}
+                    {{ brand_form.as_p }}
+                    <button type="submit" class="btn btn-primary btn-block text-uppercase mb-3">Add new brand</button>
+                </form>
+            </div>
+            
+        </div>
+    </div>
+
 {% endblock %}

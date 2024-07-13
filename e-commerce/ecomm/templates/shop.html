@@ -118,40 +118,65 @@
             
 
             <div class="col-md-3 order-1 mb-5 mb-md-0">
+                <!-- shop.html -->
+
                 <div class="border p-4 rounded mb-4">
                     <h3 class="mb-3 h6 text-uppercase text-black d-block">Categories</h3>
                     <ul class="list-unstyled mb-0">
                         {% if categories %}
-                        {% for category in categories %}
-                        <li class="mb-1">
-                            <a href="?category={{ category.category_name }}" class="d-flex{% if selected_category == category.category_name %} active{% endif %}">
-                                <span>{{ category.category_name }}</span>
-                                <span class="text-black ml-auto">({{ category.products.count }})</span>
-                            </a>
-                            <ul>
-                                {% for brand in category.brands.all %}
-                                <li>
-                                    <a href="?category={{ category.category_name }}&brand={{ brand.brand_name }}">{{ brand.brand_name }}</a>
+                            {% for category in categories %}
+                                <li class="mb-1">
+                                    <a href="?category={{ category.category_name }}" class="d-flex{% if selected_category == category.category_name %} is_active{% endif %}">
+                                        <span>{{ category.category_name }}</span>
+                                        <span class="text-black ml-auto">({{ category.products.count }})</span>
+                                    </a>
                                 </li>
-                                {% endfor %}
-                            </ul>
-                        </li>
-                        {% endfor %}
+                            {% endfor %}
                         {% else %}
-                        <li>No categories available.</li>
+                            <li>No categories available.</li>
                         {% endif %}
                     </ul>
+                    
+                    <h3 class="mb-3 h6 text-uppercase text-black d-block">Brands</h3>
+                    <ul class="list-unstyled mb-0">
+                        {% if brands %}
+                            {% for brand in brands %}
+                            {% if brand.is_active %}
+                            <li>
+                                <a href="?category={{ selected_category }}&brand={{ brand.brand_name }}">{{ brand.brand_name }}</a>
+                            </li>
+                        {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <li>No brands available for selected category.</li>
+                        {% endif %}
+                    </ul>
+                
+                    <h3 class="mb-3 h6 text-uppercase text-black d-block">Sizes</h3>
+                    <ul class="list-unstyled mb-0">
+                        {% for size in sizes %}
+                            <li>
+                                <a href="?size={{ size.size_name }}">{{ size.size_name }}</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                
+                    <h3 class="mb-3 h6 text-uppercase text-black d-block">Colors</h3>
+                    <ul class="list-unstyled mb-0">
+                        {% for color in colors %}
+                            <li>
+                                <a href="?color={{ color.color_name }}">{{ color.color_name }}</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
                 </div>
+
                 
 
                 
 
                 <div class="border p-4 rounded mb-4">
-                    <div class="mb-4">
-                        <h3 class="mb-3 h6 text-uppercase text-black d-block">Filter by Price</h3>
-                        <div id="slider-range" class="border-primary"></div>
-                        <input type="text" name="text" id="amount" class="form-control border-0 pl-0 bg-white" disabled="">
-                    </div>
+                   
 
                     <div class="mb-4">
                         <h3 class="mb-3 h6 text-uppercase text-black d-block">Size</h3>

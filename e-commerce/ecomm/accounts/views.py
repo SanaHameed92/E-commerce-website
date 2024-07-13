@@ -3,9 +3,9 @@ from django.contrib.auth import authenticate, login, logout as auth_logout
 from django.contrib.auth import login as auth_login
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from products.models import Product, Category,ProductImage
-from products.forms import ProductForm, ProductImageForm
-from .forms import AdminLoginForm, SignupForm, LoginForm,CategoryForm 
+from products.models import Brand, Color, Product, Category,ProductImage, Size
+from products.forms import BrandForm, CategoryForm, ColorForm, ProductForm, ProductImageForm, SizeForm
+from .forms import AdminLoginForm, SignupForm, LoginForm
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from .forms import CustomPasswordResetForm, OTPVerificationForm, CustomSetPasswordForm
@@ -33,11 +33,16 @@ def login_page(request):
             print(f"Authenticated User: {user}")
             
             if user is not None:
-                login(request, user)
-                messages.success(request, 'Login successful.')
-                return redirect('product_page:shop')  # Ensure the namespace and URL name are correct
+
+                if user.is_active:
+                    login(request, user)
+                    return redirect('product_page:shop')  # Redirect to your desired page
+                else:
+                    messages.error(request, 'Account is inactive.')
             else:
                 messages.error(request, 'Invalid email or password.')
+        else:
+            messages.error(request, 'Please correct the errors below.')
     else:
         form = LoginForm()
 
@@ -114,22 +119,52 @@ def admin_dashboard(request):
 def admin_products(request):
     products = Product.objects.all()
     categories = Category.objects.all()
+    brands = Brand.objects.all()
+    sizes = Size.objects.all()
+    colors = Color.objects.all()
+
     if request.method == 'POST':
-        form = CategoryForm(request.POST)
-        if form.is_valid():
-            form.save()
+        category_form = CategoryForm(request.POST)
+        brand_form = BrandForm(request.POST)
+        size_form = SizeForm(request.POST)
+        color_form = ColorForm(request.POST)
+
+        if category_form.is_valid():
+            category_form.save()
             messages.success(request, 'Category added successfully.')
             return redirect('admin_products')
+        elif brand_form.is_valid():
+            brand_form.save()
+            messages.success(request, 'Brand added successfully.')
+            return redirect('admin_products')
+        elif size_form.is_valid():
+            size_form.save()
+            messages.success(request, 'Size added successfully.')
+            return redirect('admin_products')
+        elif color_form.is_valid():
+            color_form.save()
+            messages.success(request, 'Color added successfully.')
+            return redirect('admin_products')
         else:
-            messages.error(request, 'Please correct the error below.')
+            messages.error(request, 'Please correct the errors below.')
     else:
-        form = CategoryForm()
+        category_form = CategoryForm()
+        brand_form = BrandForm()
+        size_form = SizeForm()
+        color_form = ColorForm()
 
-    return render(request, 'admin_side/admin_products.html', {
+    context = {
         'products': products,
         'categories': categories,
-        'form': form
-    })
+        'brands': brands,
+        'sizes': sizes,
+        'colors': colors,
+        'category_form': category_form,
+        'brand_form': brand_form,
+        'size_form': size_form,
+        'color_form': color_form,
+    }
+    return render(request, 'admin_side/admin_products.html', context)
 
 def edit_product(request, pk):
     product = get_object_or_404(Product, pk=pk)
@@ -183,11 +218,20 @@ def delete_category(request, pk):
     category = get_object_or_404(Category, pk=pk)
     
     if request.method == 'POST':
-        category.delete()
-        messages.success(request, 'Category deleted successfully.')
-        return redirect('admin_products')
+        # Toggle is_active status instead of deleting
+        category.is_active = not category.is_active  # Assuming 'is_active' is a BooleanField
+        category.save()
+        
+        messages.success(request, 'Category made inactive successfully.')
+        return redirect('admin_products')  # Redirect to the admin products page or appropriate view
     
     return render(request, 'admin_side/confirm_delete_category.html', {'category': category})
+
+def toggle_brand_status(request, pk):
+    brand = get_object_or_404(Brand, pk=pk)
+    brand.is_active = not brand.is_active  # Toggle the status
+    brand.save()
+    return redirect('admin_products')
 
 def add_product(request):
     if request.method == 'POST':

@@ -3,6 +3,7 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import get_user_model,authenticate
 from .models import Account
+from django.core.validators import RegexValidator
 from products.models import Product, Category
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 
@@ -43,7 +44,9 @@ class AdminLoginForm(AuthenticationForm):
 class SignupForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput)
     password2 = forms.CharField(label='Repeat Password', widget=forms.PasswordInput)
-    
+    phone_number = forms.CharField(
+        validators=[RegexValidator(regex=r'^\d{10}$', message="Phone number must be a 10-digit number.")]
+    )
 
     class Meta:
         model = Account
@@ -51,6 +54,14 @@ class SignupForm(forms.ModelForm):
         widgets = {
             'password': forms.PasswordInput(),
         }
+
+    def clean_phone_number(self):
+        phone_number = self.cleaned_data.get('phone_number')
+        if not phone_number.isdigit():
+            raise forms.ValidationError("Phone number must not contain characters or symbols.")
+        if len(phone_number) != 10:
+            raise forms.ValidationError("Phone number must be a 10-digit number.")
+        return phone_number
 
     def clean_password(self):
         password = self.cleaned_data.get('password')
@@ -68,7 +79,6 @@ class SignupForm(forms.ModelForm):
             raise forms.ValidationError("Password must contain at least one symbol.")
         
         return password
-        
 
     def __init__(self,*args,**kwargs):
         super(SignupForm,self).__init__(*args,**kwargs)
@@ -112,22 +122,19 @@ class LoginForm(forms.Form):
     email = forms.EmailField(widget=forms.EmailInput(attrs={'class': 'form-control'}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
 
+    def clean(self):
+        cleaned_data = super().clean()
+        email = cleaned_data.get('email')
+        password = cleaned_data.get('password')
 
+        if email and password:
+            user = authenticate(username=email, password=password)
+            if not user:
+                raise forms.ValidationError("Wrong credentials.")
+            if not user.is_active:
+                raise forms.ValidationError("Account is inactive.")
+        return cleaned_data
 
-
-
-class ProductForm(forms.ModelForm):
-    class Meta:
-        model = Product
-        fields = [
-            'title', 'description', 'category', 'original_price', 
-            'quantity', 'trending', 'product_image', 'availability_status'
-        ]
-
-class CategoryForm(forms.ModelForm):
-    class Meta:
-        model = Category
-        fields = ['category_name']
 
 
 

@@ -15,6 +15,7 @@ urlpatterns = [
     path('forgot-password/', views.forgot_password, name='forgot_password'),
     path('verify-otp/<int:user_id>/<str:scenario>/', views.verify_otp, name='verify_otp'),
     path('reset/<uidb64>/<token>/', views.CustomPasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    path('admin/brands/toggle/<int:pk>/', views.toggle_brand_status, name='toggle_brand_status'),
 
   
 ]
