@@ -169,19 +169,26 @@ def admin_products(request):
 def edit_product(request, pk):
     product = get_object_or_404(Product, pk=pk)
     categories = Category.objects.all()
+
+    existing_images = product.images.all()
     
     if request.method == 'POST':
         form = ProductForm(request.POST, request.FILES, instance=product)
         image_form = ProductImageForm(request.POST, request.FILES)
         
+        
         if form.is_valid():
             product_instance = form.save(commit=False)
             product_instance.updated_by = request.user  # Assuming you have an updated_by field
+            product.sizes.set(form.cleaned_data['sizes'])
+            product.colors.set(form.cleaned_data['colors'])
             product_instance.save()
 
-            if image_form.is_valid():
-                for image in request.FILES.getlist('additional_images'):
-                    ProductImage.objects.create(product=product_instance, image=image)
+            for image in existing_images:
+                image_field_name = f'image_{image.id}'
+                if image_field_name in request.FILES:
+                    image.image = request.FILES[image_field_name]
+                    image.save()
 
             messages.success(request, 'Product updated successfully.')
             return redirect('admin_products')
@@ -191,7 +198,12 @@ def edit_product(request, pk):
         form = ProductForm(instance=product)
         image_form = ProductImageForm()
 
-    return render(request, 'admin_side/edit_product.html', {'form': form, 'product': product, 'categories': categories, 'image_form': image_form})
+    return render(request, 'admin_side/edit_product.html', {
+        'form': form, 
+        'product': product, 
+        'categories': categories, 
+        'image_form': image_form,
+        'existing_images': existing_images})
 
 
 
@@ -236,21 +248,29 @@ def toggle_brand_status(request, pk):
 def add_product(request):
     if request.method == 'POST':
         product_form = ProductForm(request.POST, request.FILES)
-        image_form = ProductImageForm(request.POST, request.FILES)
-        if product_form.is_valid() and image_form.is_valid():
+
+        if product_form.is_valid():
             product = product_form.save(commit=False)
-            product.created_by = request.user  # Assuming you have implemented user authentication
+            product.created_by = request.user
             product.save()
-            image = image_form.save(commit=False)
-            image.product = product
-            image.save()
-            return redirect('admin_products')  # Redirect to admin products list after adding
+            product_form.save_m2m()
+
+            # Handle main product image
+            main_image = request.FILES.get('product_image')
+            if main_image:
+                ProductImage.objects.create(product=product, image=main_image, is_main=True)
+
+            # Handle additional images
+            additional_images = request.FILES.getlist('additional_images')
+            for image in additional_images:
+                ProductImage.objects.create(product=product, image=image, is_main=False)
+
+            return redirect('admin_products')
+
     else:
         product_form = ProductForm()
-        image_form = ProductImageForm()
 
-    return render(request, 'admin_side/add_products.html', {'product_form': product_form, 'image_form': image_form})
-
+    return render(request, 'admin_side/add_products.html', {'product_form': product_form})
 
 
 UserModel = get_user_model()

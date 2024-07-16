@@ -70,6 +70,8 @@ def cart(request):
     return render(request, 'cart.html')
 
 
+
+
 def product_filter_by_size(request):
     size = request.GET.get('size')
     products = Product.objects.filter(sizes__size_name=size)

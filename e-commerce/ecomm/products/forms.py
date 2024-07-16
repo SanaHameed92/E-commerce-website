@@ -4,11 +4,21 @@ from django import forms
 from .models import Product, ProductImage, Category, Brand, Size, Color
 
 class ProductForm(forms.ModelForm):
+    sizes = forms.ModelMultipleChoiceField(
+        queryset=Size.objects.all(),
+        widget=forms.CheckboxSelectMultiple,
+        required=False
+    )
+    colors = forms.ModelMultipleChoiceField(
+        queryset=Color.objects.all(),
+        widget=forms.CheckboxSelectMultiple,
+        required=False
+    )
     class Meta:
         model = Product
         fields = [
             'title', 'description', 'category', 'original_price', 'rating', 'brand',
-            'quantity', 'trending', 'product_image','availability_status','in_stock'
+            'quantity', 'trending', 'product_image','availability_status','in_stock','sizes','colors'
         ]
 
 
@@ -39,3 +49,5 @@ class ProductImageForm(forms.ModelForm):
     class Meta:
         model = ProductImage
         fields = ['image']
+        
+

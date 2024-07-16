@@ -19,6 +19,9 @@
 	https://templatemo.com/tm-524-product-admin
 	-->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+     <!-- Add Cropper.js CDN link -->
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+     
 </head>
 
 <body id="reportsPage">
@@ -35,8 +38,8 @@
 
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav mx-auto h-100">
-                        <li class="nav-item">
-                            <a class="nav-link active" href="{% url 'admin_dashboard'%}">
+                        <li class="nav-item {% if request.path == '/accounts/dashboard/' %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'admin_dashboard'%}">
                                 <i class="fas fa-tachometer-alt"></i>
                                 Dashboard
                                 <span class="sr-only">(current)</span>
@@ -57,10 +60,11 @@
                                 <a class="dropdown-item" href="#">Yearly Report</a>
                             </div>
                         </li>
-                        <li class="nav-item">
+                        <li class="nav-item {% if request.path == '/accounts/products/' %}active{% endif %}">
                             <a class="nav-link" href="{% url 'admin_products'%}">
                                 <i class="fas fa-shopping-cart"></i>
                                 Products
+                                <span class="sr-only">(current)</span>
                             </a>
                         </li>
 
@@ -209,6 +213,8 @@
                 }
             });
         });
+
+        
     </script>
     
     
