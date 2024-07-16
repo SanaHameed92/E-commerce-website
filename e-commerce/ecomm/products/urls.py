@@ -14,5 +14,6 @@ urlpatterns = [
     path('product_filter_by_size/', views.product_filter_by_size, name='product_filter_by_size'),
     path('product_filter_by_color/', views.product_filter_by_color, name='product_filter_by_color'),
     
+    
 
 ]

@@ -51,11 +51,11 @@ class Product(models.Model):
     category = models.ForeignKey(Category, related_name='products', on_delete=models.CASCADE)
     brand = models.ForeignKey(Brand, related_name='products', on_delete=models.SET_NULL, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
-    quantity = models.IntegerField()
-    in_stock = models.BooleanField(default=True)
+    quantity = models.PositiveIntegerField(default=1)
+    in_stock = models.PositiveIntegerField(default=1)
     availability_status = models.CharField(max_length=20, choices=AVAILABILITY_CHOICES, default='in_stock')
     trending = models.BooleanField(default=False, help_text=_('0=default, 1=Hidden'))
-    rating = models.IntegerField(default=0, help_text=_('Rating from 1 to 5'), validators=[
+    rating = models.PositiveIntegerField(default=0, help_text=_('Rating from 1 to 5'), validators=[
         MinValueValidator(1),
         MaxValueValidator(5)
     ])
@@ -82,6 +82,9 @@ class Product(models.Model):
 class ProductImage(models.Model):
     product = models.ForeignKey(Product, related_name='images', on_delete=models.CASCADE)
     image = models.ImageField(upload_to='photos/products')
+    is_main = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Image of {self.product.title}"
+    
+

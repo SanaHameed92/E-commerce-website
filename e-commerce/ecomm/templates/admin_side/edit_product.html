@@ -41,6 +41,9 @@
             padding: 0.5rem 1rem;
             cursor: pointer;
         }
+        
+        
+          
     </style>
 </head>
 <body>
@@ -49,6 +52,13 @@
         <form method="post" action="{% url 'edit_product' product.pk %}" enctype="multipart/form-data" class="custom-form">
             {% csrf_token %}
             {{ form.as_p }}
+            {% for image in existing_images %}
+            <div>
+                <img src="{{ image.image.url }}" alt="Product Image" class="img-thumbnail" style="max-width: 150px;"><br>
+                <label for="id_image_{{ image.id }}">Replace Image:</label>
+                <input type="file" name="image_{{ image.id }}" id="id_image_{{ image.id }}" ><br>
+            </div>
+        {% endfor %}
             <button type="submit" class="btn btn-primary">Update Product</button>
         </form>
     </div>

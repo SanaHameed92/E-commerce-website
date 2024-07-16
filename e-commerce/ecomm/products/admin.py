@@ -9,6 +9,7 @@ admin.site.register(Size)
 admin.site.register(Color)
 admin.site.register(ProductImage)
 
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = ('title', 'category', 'quantity', 'original_price', 'in_stock', 'trending', 'rating', 'created_at', 'updated_at')
