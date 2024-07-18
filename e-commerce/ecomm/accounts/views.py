@@ -38,11 +38,11 @@ def login_page(request):
                     login(request, user)
                     return redirect('product_page:shop')  # Redirect to your desired page
                 else:
-                    messages.error(request, 'Account is inactive.')
+                    messages.error(request, 'Account is inactive.',extra_tags='login')
             else:
-                messages.error(request, 'Invalid email or password.')
+                messages.error(request, 'Invalid email or password.',extra_tags='login')
         else:
-            messages.error(request, 'Please correct the errors below.')
+            messages.error(request, 'Please correct the errors below.',extra_tags='login')
     else:
         form = LoginForm()
 

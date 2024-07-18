@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+    /* Custom CSS styles for profile page */
+    .sidebar {
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 100;
+        padding: 48px 20px 0;
+        background-color: #f8f9fa;
+    }
+
+    .profile {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .profile-pic {
+        width: 150px;
+        height: 100px;
+        border-radius: 50%;
+    }
+
+    .nav-link {
+        color: #333;
+        font-weight: bold;
+    }
+
+    .nav-link:hover {
+        text-decoration: underline;
+    }
+
+    .sidebar {
+        position: relative;
+        top: 0;
+        height: 100%;
+        padding-top: .5rem;
+        margin-bottom:20px;
+       
+       
+    }
+
+    /* Optional: Customize profile page layout */
+    .profile-content {
+        margin-top: 20px;
+    }
+
+    .btn-add-address {
+        margin-bottom: 10px;
+    }
+
+    .address-list {
+        margin-top: 10px;
+    }
+
+    .address-item {
+        margin-bottom: 10px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+    }
+    .active {
+        font-weight: bold;
+        background-color: #e9ecef; /* Light gray background for active link */
+    }
+</style>
+
+<div class="container mb-5">
+    <div class="row">
+        <nav id="sidebar" class="col-md-3 col-lg-3 d-md-block bg-light sidebar mt-5">
+            <div class="profile text-center my-4">
+                <img src="{% static 'images/profile.jpg' %}" alt="Profile Picture" class="profile-pic img-fluid rounded-circle mb-2">
+                <h5>Hello, {{ user.first_name }}</h5>
+            </div>
+            <div class="sidebar">
+                <ul class="nav flex-column">
+                    {% url 'personal_information' as personal_information_url %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == personal_information_url %}active{% endif %}" href="{{ personal_information_url }}">
+                            <i class="fa fa-user"></i>
+                            Personal Information
+                        </a>
+                    </li>
+                    {% url 'manage_address' as manage_address_url %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == manage_address_url %}active{% endif %}" href="{{ manage_address_url }}">
+                            <i class="fa fa-map-marker"></i>
+                            Manage Address
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="fa fa-shopping-cart"></i>
+                            My Orders
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="fa fa-wallet"></i>
+                            My Wallet
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="fa fa-heart"></i>
+                            Wishlist
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="fa fa-share-alt"></i>
+                            Referral
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <main role="main" class="col-md-9 ml-sm-auto col-lg-9 px-md-4 mt-5">
+            <div class="profile-content">
+                {% if messages %}
+               {% for message in messages %}
+               <div class="alert alert-success" role="alert">
+                   {{ message }}
+               </div>
+               {% endfor %}
+               {% endif %}
+                <!-- Manage Address Section -->
+                <div class="address-section">
+                    <a href="{% url 'add_address' %}" class="btn btn-primary mb-3">Add New Address</a>
+                    <!-- Display Already Added Addresses -->
+                    <div class="address-list">
+                        {% if addresses %}
+                            {% for address in addresses %}
+                            <div class="address-item">
+                                <h5>{{ address.first_name }} {{ address.last_name }}  </h5>
+                                <p>{{ address.street_address }},{{ address.city }}, {{ address.state }}, {{ address.country }} - {{ address.postal_code }}</p>
+                                
+                                {% if address.is_default %}
+                                    <span class="badge badge-primary">Default</span>
+                                {% endif %}
+                                <div class="mt-2 text-right">
+                                    <a href="{% url 'edit_address' address.id %}" class="btn btn-sm btn-outline-primary mr-2">Edit</a>
+                                    <a href="{% url 'delete_address' address.id %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                                </div>
+                            </div>
+                            
+                            {% endfor %}
+                        {% else %}
+                            <p>No addresses added yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle add new address button click
+        var addAddressBtn = document.getElementById('add-address-btn');
+        addAddressBtn.addEventListener('click', function() {
+            // Implement logic to show address form for adding new address
+            console.log('Add New Address button clicked');
+        });
+    });
+</script>
+{% endblock %}

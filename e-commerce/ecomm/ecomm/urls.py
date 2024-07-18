@@ -27,7 +27,7 @@ urlpatterns = [
     path('accounts/', include('django.contrib.auth.urls')),
     # this code using to google authentication 
     path('accounts/',include('allauth.urls')),  
-   
+    path('User/',include('User.urls')),   
     
 ]
 
