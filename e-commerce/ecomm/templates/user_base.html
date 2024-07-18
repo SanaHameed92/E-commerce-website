@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+    /* Custom CSS styles for profile page */
+    .sidebar {
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 100;
+        padding: 48px 40px 0;
+        background-color: #f8f9fa;
+    }
+
+    .profile {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .profile-pic {
+        width: 150px;
+        height: 100px;
+        border-radius: 50%;
+    }
+
+    .nav-link {
+        color: #333;
+        font-weight: bold;
+    }
+
+    .nav-link:hover {
+        text-decoration: underline;
+    }
+
+    .sidebar-sticky {
+        position: relative;
+        top: 0;
+        height: calc(100vh - 48px);
+        padding-top: .5rem;
+        overflow-x: hidden;
+        overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
+    }
+
+    /* Optional: Customize profile page layout */
+    .profile-content {
+        margin-top: 20px;
+    }
+
+    .btn-edit {
+        margin-bottom: 10px;
+    }
+
+    .form-control[readonly] {
+        background-color: #f0f0f0; /* Light gray background for readonly fields */
+        border: 1px solid #ccc; /* Gray border for readonly fields */
+    }
+    .active {
+        font-weight: bold;
+        background-color: #e9ecef; /* Light gray background for active link */
+    }
+</style>
+
+<div class="container">
+    <div class="row">
+        <nav id="sidebar" class="col-md-3 col-lg-3 d-md-block bg-light sidebar mt-5">
+            <div class="profile text-center my-4">
+                <img src="{% static 'images/profile.jpg' %}" alt="Profile Picture" class="profile-pic img-fluid rounded-circle mb-2">
+                <h5>Hello, {{ user.first_name }}</h5>
+            </div>
+            <div class="sidebar-sticky">
+                <ul class="nav flex-column">
+                    {% url 'personal_information' as personal_information_url %}
+                    <li class="nav-item ">
+                        <a class="nav-link {% if request.path == personal_information_url %}active{% endif %}" href="{{ personal_information_url }}">
+                            <i class="fa fa-user"></i>
+                            Personal Information
+                        </a>
+                    </li>
+                    {% url 'manage_address' as manage_address_url %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == manage_address_url %}active{% endif %}" href="{{ manage_address_url }}">
+                            <i class="fa fa-map-marker"></i>
+                            Manage Address
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="fa fa-shopping-cart"></i>
+                            My Orders
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="fa fa-wallet"></i>
+                            My Wallet
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="fa fa-heart"></i>
+                            Wishlist
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="fa fa-share-alt"></i>
+                            Referral
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="fa fa-key"></i>
+                            Reset Password
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        {%block content%}
+
+        {%endblock%}

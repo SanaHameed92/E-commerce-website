@@ -52,6 +52,7 @@ class Product(models.Model):
     brand = models.ForeignKey(Brand, related_name='products', on_delete=models.SET_NULL, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
     quantity = models.PositiveIntegerField(default=1)
+    max_qty_per_person = models.PositiveIntegerField(default=2)
     in_stock = models.PositiveIntegerField(default=1)
     availability_status = models.CharField(max_length=20, choices=AVAILABILITY_CHOICES, default='in_stock')
     trending = models.BooleanField(default=False, help_text=_('0=default, 1=Hidden'))
@@ -88,3 +89,16 @@ class ProductImage(models.Model):
         return f"Image of {self.product.title}"
     
 
+class Cart(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class CartItem(models.Model):
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def total_price(self):
+        return self.product.original_price * self.quantity

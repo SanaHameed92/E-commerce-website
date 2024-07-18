@@ -20,33 +20,14 @@
                         <div class="float-md-left mb-4">
                             <h2 class="text-black h5">Shop All</h2>
                         </div>
-                        <div class="d-flex">
-                            <div class="dropdown mr-1 ml-md-auto">
-                                <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" id="dropdownMenuOffset" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    Latest
-                                </button>
-                                <div class="dropdown-menu" aria-labelledby="dropdownMenuOffset">
-                                    <a class="dropdown-item" href="#">Men</a>
-                                    <a class="dropdown-item" href="#">Women</a>
-                                    <a class="dropdown-item" href="#">Children</a>
-                                </div>
-                            </div>
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" id="dropdownMenuReference" data-bs-toggle="dropdown">
-                                    Reference
-                                </button>
-                                <div class="dropdown-menu" aria-labelledby="dropdownMenuReference">
-                                    <a class="dropdown-item" href="#">Relevance</a>
-                                    <a class="dropdown-item" href="#">Name, A to Z</a>
-                                    <a class="dropdown-item" href="#">Name, Z to A</a>
-                                    <div class="dropdown-divider"></div>
-                                    <a class="dropdown-item" href="#">Price, low to high</a>
-                                    <a class="dropdown-item" href="#">Price, high to low</a>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
+                
+                {% if product_error %}
+                <div class="alert alert-danger">
+                    {{ product_error.message }}
+                </div>
+                {% endif %}
                 
                 {% for product_chunks in products|chunks:3 %}
                 <div class="row mb-5">
@@ -78,9 +59,13 @@
                                     <p class="text-primary font-weight-bold">${{ product.original_price }}</p>
                                     {% if product.availability_status == 'in_stock' %}
                                     <p class="text-success font-weight-bold">In Stock</p>
+                                   
                                     {% else %}
                                     <p class="text-danger font-weight-bold">Out of Stock</p>
+                                   
                                     {% endif %}
+                                   
+                                    
                                 </div>
                             </div>
                         </div>
@@ -115,11 +100,8 @@
                     </div>
                 </div>
             </div>
-            
 
             <div class="col-md-3 order-1 mb-5 mb-md-0">
-                <!-- shop.html -->
-
                 <div class="border p-4 rounded mb-4">
                     <h3 class="mb-3 h6 text-uppercase text-black d-block">Categories</h3>
                     <ul class="list-unstyled mb-0">
@@ -138,7 +120,7 @@
                     </ul>
                     
                     <h3 class="mb-3 h6 text-uppercase text-black d-block">Brands</h3>
-                    <ul class="list-unstyled mb-0">
+                    <ul class="list-unstyled mb-2">
                         {% if brands %}
                             {% for brand in brands %}
                             {% if brand.is_active %}
@@ -153,7 +135,7 @@
                     </ul>
                 
                     <h3 class="mb-3 h6 text-uppercase text-black d-block">Sizes</h3>
-                    <ul class="list-unstyled mb-0">
+                    <ul class="list-unstyled mb-2">
                         {% for size in sizes %}
                             <li>
                                 <a href="?size={{ size.size_name }}">{{ size.size_name }}</a>
@@ -162,7 +144,7 @@
                     </ul>
                 
                     <h3 class="mb-3 h6 text-uppercase text-black d-block">Colors</h3>
-                    <ul class="list-unstyled mb-0">
+                    <ul class="list-unstyled mb-2">
                         {% for color in colors %}
                             <li>
                                 <a href="?color={{ color.color_name }}">{{ color.color_name }}</a>
@@ -170,70 +152,9 @@
                         {% endfor %}
                     </ul>
                 </div>
-
-                
-
-                
-
-                <div class="border p-4 rounded mb-4">
-                   
-
-                    <div class="mb-4">
-                        <h3 class="mb-3 h6 text-uppercase text-black d-block">Size</h3>
-                        <ul class="list-unstyled mb-0">
-                            <li class="mb-1">
-                                <a href="?size=Small" class="size-link {% if selected_size == 'Small' %}active{% endif %}" data-size="Small">
-                                    Small ({{ small_count }})
-                                </a>
-                            </li>
-                            <li class="mb-1">
-                                <a href="?size=Medium" class="size-link {% if selected_size == 'Medium' %}active{% endif %}" data-size="Medium">
-                                    Medium ({{ medium_count }})
-                                </a>
-                            </li>
-                            <li class="mb-1">
-                                <a href="?size=Large" class="size-link {% if selected_size == 'Large' %}active{% endif %}" data-size="Large">
-                                    Large ({{ large_count }})
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                 
-
-                    <div class="mb-4">
-                        <h3 class="mb-3 h6 text-uppercase text-black d-block">Color</h3>
-                        <ul class="list-unstyled mb-0">
-                            <li class="mb-1">
-                                <a href="?color=Red" class="color-link {% if selected_color == 'Red' %}active{% endif %}" data-color="Red">
-                                    Red ({{ red_count }})
-                                </a>
-                            </li>
-                            <li class="mb-1">
-                                <a href="?color=Green" class="color-link {% if selected_color == 'Green' %}active{% endif %}" data-color="Green">
-                                    Green ({{ green_count }})
-                                </a>
-                            </li>
-                            <li class="mb-1">
-                                <a href="?color=Blue" class="color-link {% if selected_color == 'Blue' %}active{% endif %}" data-color="Blue">
-                                    Blue ({{ blue_count }})
-                                </a>
-                            </li>
-                            <li class="mb-1">
-                                <a href="?color=Purple" class="color-link {% if selected_color == 'Purple' %}active{% endif %}" data-color="Purple">
-                                    Purple ({{ purple_count }})
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                </div>
             </div>
         </div>
     </div>
 </div>
 
 {% endblock %}
-
-
-
-

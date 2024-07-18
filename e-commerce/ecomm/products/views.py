@@ -1,15 +1,16 @@
 from django.shortcuts import render, get_object_or_404
-from .models import Product, Category, Brand, Size, Color
+from .models import Cart, CartItem, Product, Category, Brand, Size, Color
 from django.core.paginator import Paginator
-from django.shortcuts import render
+from django.shortcuts import render,redirect
 from django.http import JsonResponse
-
+from django.contrib import messages
 
 def shop(request):
     category_name = request.GET.get('category')
     brand_name = request.GET.get('brand')
     color = request.GET.get('color')
     size = request.GET.get('size')
+    cart_items_count = CartItem.objects.filter(cart__user=request.user).count()
 
     product_list = Product.objects.all()
 
@@ -53,21 +54,96 @@ def shop(request):
         'selected_brand': brand_name,
         'selected_color': color,
         'selected_size': size,
+        'cart_items_count': cart_items_count,
+        'product_error': request.session.pop('product_error', None)
     }
+   
     return render(request, 'shop.html', context)
+
+
 
 def shop_single(request, product_id):
     product = get_object_or_404(Product, pk=product_id)
     features_products = Product.objects.filter(trending=True)[:3]
+    
 
     context = {
         'product': product,
-        'featured_items': features_products
+        'featured_items': features_products,
+        'product_error': request.session.pop('product_error', None)
     }
     return render(request, 'shop-single.html', context)
 
+def add_to_cart(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    cart, created = Cart.objects.get_or_create(user=request.user)
+    
+    # Check if there is enough stock available
+    if product.quantity <= 0:
+        messages.error(request, 'Product is out of stock.')
+        return redirect('product_page:shop')
+
+    # Check if the cart item already exists
+    cart_item, item_created = CartItem.objects.get_or_create(cart=cart, product=product)
+    
+    # If item already exists in cart, check if adding one more exceeds stock
+    if not item_created:
+        if cart_item.quantity >= product.quantity:
+            # Store error message in session
+            request.session['product_error'] = {
+                'product_id': product_id,
+                'message': 'Maximum stock limit reached for this product.'
+            }
+            # Redirect to shop.html and display error message
+            return redirect('product_page:shop-single', product_id=product.id)
+        
+
+        if cart_item.quantity >= product.max_qty_per_person:
+            # Store error message in session
+            request.session['product_error'] = {
+                'product_id': product_id,
+                'message': f'You can only add up to {product.max_qty_per_person} items of this product.'
+            }
+            # Redirect to shop-single.html and display error message
+            return redirect('product_page:shop-single', product_id=product.id)
+
+        cart_item.quantity += 1
+        cart_item.save()
+    else:
+        cart_item.quantity = 1
+        cart_item.save()
+
+    messages.success(request, 'Product added to cart!')
+
+    # Determine the referrer
+    referrer = request.META.get('HTTP_REFERER', '')
+
+    # Add messages based on referrer
+    if 'shop-single' in referrer:
+        
+        
+        return redirect('product_page:cart')
+
+    # Redirect to shop.html and display success message
+    return redirect('product_page:shop')
+
+
 def cart(request):
-    return render(request, 'cart.html')
+    cart, created = Cart.objects.get_or_create(user=request.user)
+    cart_items = CartItem.objects.filter(cart=cart)
+    cart_items_count = cart_items.count()
+    context = {
+        'cart_items': cart_items,
+        'total': sum(item.total_price for item in cart_items),
+        'cart_items_count': cart_items_count,
+    }
+    return render(request, 'cart.html', context)
+
+def remove_from_cart(request, cart_item_id):
+    cart_item = get_object_or_404(CartItem, id=cart_item_id, cart__user=request.user)
+    cart_item.delete()
+   
+    return redirect('product_page:cart')
 
 
 
@@ -93,3 +169,7 @@ def product_filter_by_color(request):
     products = Product.objects.filter(colors__color_name=color)
     context = {'products': products}
     return render(request, 'shop.html', context)
+
+
+def checkout(request):
+    return render(request,'user/checkout.html')
