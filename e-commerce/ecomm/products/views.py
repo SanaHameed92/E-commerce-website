@@ -2,13 +2,18 @@ from django.shortcuts import render, get_object_or_404
 from .models import Cart, CartItem, Product, Category, Brand, Size, Color
 from django.core.paginator import Paginator
 from django.shortcuts import render,redirect
-from django.http import JsonResponse
+from django.urls import reverse
+from django.http import HttpResponse
 from django.contrib import messages
+from User.models import Address
+from User.forms import AddressForm
+
 
 def shop(request):
     category_name = request.GET.get('category')
     brand_name = request.GET.get('brand')
     color = request.GET.get('color')
+    sort = request.GET.get('sort')
     size = request.GET.get('size')
     cart_items_count = CartItem.objects.filter(cart__user=request.user).count()
 
@@ -34,6 +39,23 @@ def shop(request):
         except Size.DoesNotExist:
             pass
 
+    if sort == 'popularity':
+        product_list = product_list.order_by('-popularity')  # Assuming you have a popularity field
+    elif sort == 'price_low_high':
+        product_list = product_list.order_by('original_price')
+    elif sort == 'price_high_low':
+        product_list = product_list.order_by('-original_price')
+    elif sort == 'average_ratings':
+        product_list = product_list.order_by('-rating')
+    elif sort == 'featured':
+        product_list = product_list.order_by('-featured')
+    elif sort == 'new_arrivals':
+        product_list = product_list.order_by('-created_at')
+    elif sort == 'a_z':
+        product_list = product_list.order_by('title')
+    elif sort == 'z_a':
+        product_list = product_list.order_by('-title')
+
     product_paginator = Paginator(product_list, 6)
     page_number = request.GET.get('page')
     product_list = product_paginator.get_page(page_number)
@@ -54,6 +76,7 @@ def shop(request):
         'selected_brand': brand_name,
         'selected_color': color,
         'selected_size': size,
+        'selected_sort': sort,
         'cart_items_count': cart_items_count,
         'product_error': request.session.pop('product_error', None)
     }
@@ -78,53 +101,45 @@ def add_to_cart(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     cart, created = Cart.objects.get_or_create(user=request.user)
     
+    # Get the quantity from the POST request
+    quantity = int(request.POST.get('quantity', 1))
+    
     # Check if there is enough stock available
-    if product.quantity <= 0:
-        messages.error(request, 'Product is out of stock.')
-        return redirect('product_page:shop')
-
+    if product.quantity < quantity:
+        messages.error(request, 'Not enough stock available.')
+        return redirect('product_page:shop-single', product_id=product.id)
+    
     # Check if the cart item already exists
     cart_item, item_created = CartItem.objects.get_or_create(cart=cart, product=product)
     
-    # If item already exists in cart, check if adding one more exceeds stock
     if not item_created:
-        if cart_item.quantity >= product.quantity:
-            # Store error message in session
+        if cart_item.quantity + quantity > product.quantity:
             request.session['product_error'] = {
                 'product_id': product_id,
                 'message': 'Maximum stock limit reached for this product.'
             }
-            # Redirect to shop.html and display error message
             return redirect('product_page:shop-single', product_id=product.id)
         
-
-        if cart_item.quantity >= product.max_qty_per_person:
-            # Store error message in session
+        if cart_item.quantity + quantity > product.max_qty_per_person:
             request.session['product_error'] = {
                 'product_id': product_id,
                 'message': f'You can only add up to {product.max_qty_per_person} items of this product.'
             }
-            # Redirect to shop-single.html and display error message
             return redirect('product_page:shop-single', product_id=product.id)
-
-        cart_item.quantity += 1
+        
+        cart_item.quantity += quantity
         cart_item.save()
     else:
-        cart_item.quantity = 1
+        cart_item.quantity = quantity
         cart_item.save()
 
     messages.success(request, 'Product added to cart!')
 
-    # Determine the referrer
     referrer = request.META.get('HTTP_REFERER', '')
 
-    # Add messages based on referrer
     if 'shop-single' in referrer:
-        
-        
         return redirect('product_page:cart')
 
-    # Redirect to shop.html and display success message
     return redirect('product_page:shop')
 
 
@@ -132,6 +147,7 @@ def cart(request):
     cart, created = Cart.objects.get_or_create(user=request.user)
     cart_items = CartItem.objects.filter(cart=cart)
     cart_items_count = cart_items.count()
+    
     context = {
         'cart_items': cart_items,
         'total': sum(item.total_price for item in cart_items),
@@ -172,4 +188,117 @@ def product_filter_by_color(request):
 
 
 def checkout(request):
-    return render(request,'user/checkout.html')
+    cart, created = Cart.objects.get_or_create(user=request.user)
+    cart_items = CartItem.objects.filter(cart=cart)
+    total = sum(item.total_price for item in cart_items)
+    shipping_fee = 50 if total >= 350 else 0
+    grand_total = total + shipping_fee
+
+    addresses = Address.objects.filter(user=request.user)
+
+    if request.method == 'POST':
+        address_id = request.POST.get('selected_address')
+        payment_method = request.POST.get('payment_method')
+        order_notes = request.POST.get('order_notes')
+
+        if address_id:
+            selected_address = Address.objects.get(id=address_id)
+        else:
+            address_form = AddressForm(request.POST)
+
+            if address_form.is_valid():
+                new_address = address_form.save(commit=False)
+                new_address.user = request.user
+                new_address.save()
+                if new_address.is_default:
+                    Address.objects.filter(user=request.user).exclude(id=new_address.id).update(is_default=False)
+                address_id = new_address.id
+            else:
+            # Address was selected from existing addresses
+                address_id = address_id
+
+        selected_address = Address.objects.get(id=address_id)
+
+        # Pass the data to the order summary page
+        return redirect('product_page:order_summary', {
+            'cart_items': cart_items,
+            'total': total,
+            'shipping_fee': shipping_fee,
+            'grand_total': grand_total,
+            'selected_address': selected_address,
+            'payment_method': payment_method,
+            'order_notes': order_notes
+        })
+
+    else:
+        address_form = AddressForm()
+
+    context = {
+        'cart_items': cart_items,
+        'total': total,
+        'addresses': addresses,
+        'address_form': address_form,
+        'grand_total': grand_total,
+        'shipping_fee': shipping_fee,
+    }
+
+    return render(request, 'user/checkout.html', context)
+
+def order_summary(request):
+    # Get data from the request
+    cart_items = request.GET.get('cart_items')
+    total = request.GET.get('total')
+    shipping_fee = request.GET.get('shipping_fee')
+    grand_total = request.GET.get('grand_total')
+    selected_address = request.GET.get('selected_address')
+    payment_method = request.GET.get('payment_method')
+    order_notes = request.GET.get('order_notes')
+
+    context = {
+        'cart_items': cart_items,
+        'total': total,
+        'shipping_fee': shipping_fee,
+        'grand_total': grand_total,
+        'selected_address': selected_address,
+        'payment_method': payment_method,
+        'order_notes': order_notes
+    }
+
+    return render(request, 'user/order_summary.html', context)
+
+def update_cart(request):
+    if request.method == 'POST':
+        cart_items = CartItem.objects.filter(cart__user=request.user)
+        has_error = False
+        error_messages = {}
+
+        for item in cart_items:
+            quantity = request.POST.get(f'quantity_{item.id}', 0)
+            try:
+                quantity = int(quantity)
+            except ValueError:
+                quantity = 0
+            
+            if quantity <= 0:
+                item.delete()
+            else:
+                if quantity <= item.product.max_qty_per_person:
+                    item.quantity = quantity
+                    item.save()
+                else:
+                    error_messages[item.id] = f"Quantity exceeds limit for {item.product.title}."
+                    has_error = True
+        
+        if has_error:
+            request.session['error_messages'] = error_messages
+            return redirect('product_page:cart')  # Redirect back to cart to display error messages
+
+        # Clear error messages after successful update
+        if 'error_messages' in request.session:
+            del request.session['error_messages']
+        
+        return redirect('product_page:cart')  # Redirect back to cart or appropriate page
+
+    return HttpResponse("Invalid request method", status=405)
+
+

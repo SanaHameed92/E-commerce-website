@@ -65,6 +65,7 @@ class Product(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     product_image = models.ImageField(upload_to='photos/products', verbose_name=_("Product Image"), default='default_product_image.jpg')
     featured = models.BooleanField(default=False, help_text=_('Is this product featured?'))
+    popularity = models.IntegerField(default=0)
     sizes = models.ManyToManyField(Size, blank=True)
     colors = models.ManyToManyField(Color, blank=True)
 
@@ -102,3 +103,6 @@ class CartItem(models.Model):
     @property
     def total_price(self):
         return self.product.original_price * self.quantity
+    
+
+

@@ -18,7 +18,8 @@ class ProductForm(forms.ModelForm):
         model = Product
         fields = [
             'title', 'description', 'category', 'original_price', 'rating', 'brand',
-            'quantity', 'trending', 'product_image','availability_status','in_stock','sizes','colors'
+            'quantity','max_qty_per_person', 'trending', 'product_image','availability_status','sizes','colors','featured',
+            'popularity',
         ]
 
 
@@ -51,3 +52,15 @@ class ProductImageForm(forms.ModelForm):
         fields = ['image']
         
 
+class CartUpdateForm(forms.Form):
+
+    def __init__(self, *args, **kwargs):
+        cart_items = kwargs.pop('cart_items', [])
+        super().__init__(*args, **kwargs)
+        for item in cart_items:
+            self.fields[f'quantity_{item.id}'] = forms.IntegerField(
+                initial=item.quantity,
+                min_value=1,
+                max_value=item.product.max_qty_per_person,
+                label=item.product.title
+            )

@@ -42,13 +42,21 @@ def profile(request):
     return render(request, 'user/profile.html',{'user':user})
 
 def manage_address(request):
-    addresses = Address.objects.all()
+    # Ensure user is authenticated
+    if not request.user.is_authenticated:
+        return redirect('login')  # Redirect to login if not authenticated
+
+    # Filter addresses for the logged-in user
+    addresses = Address.objects.filter(user=request.user)
+
     return render(request, 'user/manage_address.html', {'addresses': addresses})
 
 def add_address(request):
     if request.method == 'POST':
         form = AddressForm(request.POST)
         if form.is_valid():
+            address = form.save(commit=False)
+            address.user = request.user  # Assign the current user
             form.save()
             messages.success(request, 'Address added successfully!')
             return redirect('manage_address')
@@ -98,3 +106,6 @@ def reset_password(request):
         form = PasswordChangeForm(request.user)
 
     return render(request, 'user/profile.html', {'form': form})
+
+
+

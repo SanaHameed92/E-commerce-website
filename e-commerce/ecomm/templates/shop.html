@@ -20,15 +20,42 @@
                         <div class="float-md-left mb-4">
                             <h2 class="text-black h5">Shop All</h2>
                         </div>
+                        <div class="d-flex">
+                            <div class="dropdown mr-1 ml-md-auto">
+                              <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" id="dropdownMenuOffset" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Categories
+                              </button>
+                              <div class="dropdown-menu" aria-labelledby="dropdownMenuOffset">
+                                <a class="dropdown-item" href="{% url 'product_page:shop' %}?category=Men">Men</a>
+                                <a class="dropdown-item" href="{% url 'product_page:shop' %}?category=Women">Women</a>
+                                <a class="dropdown-item" href="{% url 'product_page:shop' %}?category=Boys">Boys</a>
+                                <a class="dropdown-item" href="{% url 'product_page:shop' %}?category=Girls">Girls</a>
+                              </div>
+                            </div>
+                            <div class="btn-group">
+                              <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" id="dropdownMenuReference" data-toggle="dropdown">Reference</button>
+                              <div class="dropdown-menu" aria-labelledby="dropdownMenuReference">
+                                <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=popularity">Popularity</a>
+                                <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=a_z">Name, A to Z</a>
+                                <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=z_a">Name, Z to A</a>
+                                <a class="dropdown-item" href="#">Average Ratings</a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=price_low_high">Price, low to high</a>
+                                <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=price_high_low">Price, high to low</a>
+                              </div>
+                            </div>
+                        </div>
+                        
+                        
                     </div>
                 </div>
-                
+
                 {% if product_error %}
                 <div class="alert alert-danger">
                     {{ product_error.message }}
                 </div>
                 {% endif %}
-                
+
                 {% for product_chunks in products|chunks:3 %}
                 <div class="row mb-5">
                     {% for product in product_chunks %}
@@ -57,15 +84,14 @@
                                         </div>
                                     </div>
                                     <p class="text-primary font-weight-bold">${{ product.original_price }}</p>
+                                    {% if product.quantity == 1 %}
+                                        <span style="color: red;">Only 1 item left in stock!</span>
+                                    {% endif %}
                                     {% if product.availability_status == 'in_stock' %}
                                     <p class="text-success font-weight-bold">In Stock</p>
-                                   
                                     {% else %}
                                     <p class="text-danger font-weight-bold">Out of Stock</p>
-                                   
                                     {% endif %}
-                                   
-                                    
                                 </div>
                             </div>
                         </div>
@@ -118,7 +144,7 @@
                             <li>No categories available.</li>
                         {% endif %}
                     </ul>
-                    
+
                     <h3 class="mb-3 h6 text-uppercase text-black d-block">Brands</h3>
                     <ul class="list-unstyled mb-2">
                         {% if brands %}
@@ -133,7 +159,7 @@
                             <li>No brands available for selected category.</li>
                         {% endif %}
                     </ul>
-                
+
                     <h3 class="mb-3 h6 text-uppercase text-black d-block">Sizes</h3>
                     <ul class="list-unstyled mb-2">
                         {% for size in sizes %}
@@ -142,7 +168,7 @@
                             </li>
                         {% endfor %}
                     </ul>
-                
+
                     <h3 class="mb-3 h6 text-uppercase text-black d-block">Colors</h3>
                     <ul class="list-unstyled mb-2">
                         {% for color in colors %}
@@ -151,6 +177,7 @@
                             </li>
                         {% endfor %}
                     </ul>
+                    
                 </div>
             </div>
         </div>

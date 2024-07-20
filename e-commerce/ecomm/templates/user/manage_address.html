@@ -39,8 +39,6 @@
         height: 100%;
         padding-top: .5rem;
         margin-bottom:20px;
-       
-       
     }
 
     /* Optional: Customize profile page layout */
@@ -122,12 +120,12 @@
         <main role="main" class="col-md-9 ml-sm-auto col-lg-9 px-md-4 mt-5">
             <div class="profile-content">
                 {% if messages %}
-               {% for message in messages %}
-               <div class="alert alert-success" role="alert">
-                   {{ message }}
-               </div>
-               {% endfor %}
-               {% endif %}
+                    {% for message in messages %}
+                    <div class="alert alert-success" role="alert">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
                 <!-- Manage Address Section -->
                 <div class="address-section">
                     <a href="{% url 'add_address' %}" class="btn btn-primary mb-3">Add New Address</a>
@@ -136,8 +134,8 @@
                         {% if addresses %}
                             {% for address in addresses %}
                             <div class="address-item">
-                                <h5>{{ address.first_name }} {{ address.last_name }}  </h5>
-                                <p>{{ address.street_address }},{{ address.city }}, {{ address.state }}, {{ address.country }} - {{ address.postal_code }}</p>
+                                <h5>{{ address.first_name }} {{ address.last_name }}</h5>
+                                <p>{{ address.street_address }}, {{ address.city }}, {{ address.state }}, {{ address.country }} - {{ address.postal_code }}</p>
                                 
                                 {% if address.is_default %}
                                     <span class="badge badge-primary">Default</span>
@@ -147,7 +145,6 @@
                                     <a href="{% url 'delete_address' address.id %}" class="btn btn-sm btn-outline-danger">Delete</a>
                                 </div>
                             </div>
-                            
                             {% endfor %}
                         {% else %}
                             <p>No addresses added yet.</p>
@@ -163,10 +160,12 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Handle add new address button click
         var addAddressBtn = document.getElementById('add-address-btn');
-        addAddressBtn.addEventListener('click', function() {
-            // Implement logic to show address form for adding new address
-            console.log('Add New Address button clicked');
-        });
+        if (addAddressBtn) {
+            addAddressBtn.addEventListener('click', function() {
+                // Implement logic to show address form for adding new address
+                console.log('Add New Address button clicked');
+            });
+        }
     });
 </script>
 {% endblock %}
