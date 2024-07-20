@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="site-section">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12 mb-0">
+                <a href="{% url 'main_page:index' %}">Home</a> <span class="mx-2 mb-0">/</span>
+                <strong class="text-black">Order Summary</strong>
+            </div>
+        </div>
+
+        <div class="row mt-5">
+            <div class="col-md-12">
+                <h2 class="h3 mb-3 text-black">Order Summary</h2>
+                <div class="p-3 p-lg-5 border">
+                    <h4>Delivery Address:</h4>
+                    <p>{{ selected_address.first_name }} {{ selected_address.last_name }}</p>
+                    <p>{{ selected_address.street_address }}, {{ selected_address.city }}, {{ selected_address.state }}, {{ selected_address.country }} - {{ selected_address.postal_code }}</p>
+                    <p>Phone: {{ selected_address.phone_number }}</p>
+                    <p>Email: {{ selected_address.email }}</p>
+                    
+                    <h4>Order Notes:</h4>
+                    <p>{{ order_notes }}</p>
+                    
+                    <h4>Payment Method:</h4>
+                    <p>{{ payment_method }}</p>
+
+                    <h4>Your Order:</h4>
+                    <table class="table site-block-order-table mb-5">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in cart_items %}
+                            <tr>
+                                <td>{{ item.product.title }} <strong class="mx-2">x</strong> {{ item.quantity }}</td>
+                                <td>${{ item.total_price }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr>
+                                <td class="text-black font-weight-bold"><strong>Cart Subtotal</strong></td>
+                                <td class="text-black">${{ total }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-black font-weight-bold"><strong>Shipping</strong></td>
+                                <td class="text-black">${{ shipping_fee }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-black font-weight-bold"><strong>Order Total</strong></td>
+                                <td class="text-black font-weight-bold">
+                                    <strong>${{ grand_total }}</strong>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

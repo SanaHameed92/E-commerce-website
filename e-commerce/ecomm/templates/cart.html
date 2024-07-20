@@ -14,13 +14,11 @@
     </div>
 </div>
 
-
-
 <div class="site-section">
     <div class="container">
         {% if cart_items %}
         <div class="row mb-5">
-            <form class="col-md-12" method="post" id="cart-form">
+            <form class="col-md-12" method="post" action="{% url 'product_page:update_cart' %}">
                 {% csrf_token %}
                 <div class="site-blocks-table">
                     <table class="table table-bordered">
@@ -48,13 +46,7 @@
                                 <td>${{ item.product.original_price }}</td>
                                 <td>
                                     <div class="input-group mb-3" style="max-width: 120px;">
-                                        <div class="input-group-prepend">
-                                            <button class="btn btn-outline-primary js-btn-minus" type="button" data-id="{{ item.id }}">&minus;</button>
-                                        </div>
-                                        <input type="text" class="form-control text-center quantity-input" value="{{ item.quantity }}" data-id="{{ item.id }}" aria-label="Example text with button addon" aria-describedby="button-addon1">
-                                        <div class="input-group-append">
-                                            <button class="btn btn-outline-primary js-btn-plus" type="button" data-id="{{ item.id }}">&plus;</button>
-                                        </div>
+                                        <input type="number" class="form-control text-center" name="quantity_{{ item.id }}" value="{{ item.quantity }}" min="1">
                                     </div>
                                 </td>
                                 <td>${{ item.total_price }}</td>
@@ -65,6 +57,7 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                    <button type="submit" class="btn btn-primary btn-lg mt-4">Update Cart</button>
                 </div>
             </form>
         </div>
@@ -134,47 +127,3 @@
     </div>
 </div>
 {% endblock %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.js-btn-minus').forEach(button => {
-            button.addEventListener('click', function() {
-                const id = this.getAttribute('data-id');
-                updateQuantity(id, -1);
-            });
-        });
-
-        document.querySelectorAll('.js-btn-plus').forEach(button => {
-            button.addEventListener('click', function() {
-                const id = this.getAttribute('data-id');
-                updateQuantity(id, 1);
-            });
-        });
-
-        document.querySelectorAll('.quantity-input').forEach(input => {
-            input.addEventListener('change', function() {
-                const id = this.getAttribute('data-id');
-                const quantity = parseInt(this.value);
-                updateQuantity(id, quantity);
-            });
-        });
-
-        function updateQuantity(id, change) {
-            fetch(`/cart/update/${id}/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify({ 'change': change })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert(data.error);
-                }
-            });
-        }
-    });
-</script>
