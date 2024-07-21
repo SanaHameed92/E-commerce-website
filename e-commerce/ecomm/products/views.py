@@ -1,5 +1,6 @@
+import uuid
 from django.shortcuts import render, get_object_or_404
-from .models import Cart, CartItem, Product, Category, Brand, Size, Color
+from .models import Cart, CartItem, Order, OrderItem, Product, Category, Brand, Size, Color
 from django.core.paginator import Paginator
 from django.shortcuts import render,redirect
 from django.urls import reverse
@@ -188,14 +189,16 @@ def product_filter_by_color(request):
 
 
 def checkout(request):
+    # Get or create the cart for the user
     cart, created = Cart.objects.get_or_create(user=request.user)
     cart_items = CartItem.objects.filter(cart=cart)
     
-    # Calculate total dynamically
+    # Calculate totals and fees
     total = sum(item.total_price for item in cart_items)
     shipping_fee = 50 if total >= 350 else 0
     grand_total = total + shipping_fee
 
+    # Get user's addresses
     addresses = Address.objects.filter(user=request.user)
 
     if request.method == 'POST':
@@ -205,31 +208,33 @@ def checkout(request):
 
         if address_id:
             try:
+                # Fetch the selected address
                 selected_address = Address.objects.get(id=address_id)
             except Address.DoesNotExist:
                 messages.error(request, "Selected address does not exist.")
                 return redirect('checkout')
 
-            # Format address manually
+            # Format address
             formatted_address = (f"{selected_address.first_name} {selected_address.last_name}, "
                                   f"{selected_address.street_address}, {selected_address.city}, "
                                   f"{selected_address.state}, {selected_address.country}, "
                                   f"{selected_address.postal_code}")
 
-            # Convert Decimal to float
+            # Prepare data for session
             cart_items_data = [
                 {
                     'title': item.product.title,
                     'quantity': item.quantity,
-                    'total_price': float(item.total_price)  # Convert to float
+                    'total_price': float(item.total_price)  # Convert to float for JSON serialization
                 } for item in cart_items
             ]
             request.session['cart_items'] = cart_items_data
-            request.session['total'] = float(total)  # Convert to float
-            request.session['shipping_fee'] = float(shipping_fee)  # Convert to float
-            request.session['grand_total'] = float(grand_total)  # Convert to float
+            request.session['total'] = float(total)
+            request.session['shipping_fee'] = float(shipping_fee)
+            request.session['grand_total'] = float(grand_total)
             request.session['selected_address'] = {
                 'address': formatted_address,
+                'id': selected_address.id,
                 'payment_method': payment_method,
             }
             request.session.modified = True
@@ -256,12 +261,17 @@ def order_summary(request):
     grand_total = request.session.get('grand_total', 0)
     selected_address = request.session.get('selected_address', {})
 
+    # Extract address details
+    formatted_address = selected_address.get('address', 'No address selected')
+    payment_method = selected_address.get('payment_method', 'Not Provided')
+
     context = {
         'cart_items': cart_items,
         'total': total,
         'shipping_fee': shipping_fee,
         'grand_total': grand_total,
-        'selected_address': selected_address,
+        'formatted_address': formatted_address,
+        'payment_method': payment_method,
     }
 
     return render(request, 'user/order_summary.html', context)
@@ -303,3 +313,66 @@ def update_cart(request):
     return HttpResponse("Invalid request method", status=405)
 
 
+def place_order(request):
+    # Retrieve session data
+    cart_items_data = request.session.get('cart_items')
+    total = request.session.get('total')
+    shipping_fee = request.session.get('shipping_fee')
+    grand_total = request.session.get('grand_total')
+    #selected_address = request.session.get('selected_address')
+    address_id = request.session.get('selected_address', {}).get('id')
+    payment_method = request.session.get('selected_address', {}).get('payment_method')
+
+    if not cart_items_data or not address_id:
+        messages.error(request, "Incomplete order details.")
+        return redirect('product_page:checkout')
+
+  
+
+    try:
+
+        selected_address = Address.objects.get(id=address_id)
+        # Create an Order
+        order = Order.objects.create(
+            user=request.user,
+            address=selected_address,  # Store address as a string
+            payment_method=payment_method,
+            order_notes=request.POST.get('order_notes', ''),
+            total_amount=total,
+            shipping_fee=shipping_fee,
+            grand_total=grand_total,
+            order_number=str(uuid.uuid4())  # Generate a unique order number
+        )
+
+        # Create Order Items
+        for item_data in cart_items_data:
+            product = Product.objects.get(title=item_data['title'])
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                quantity=item_data['quantity'],
+                total_price=item_data['total_price']
+            )
+
+        # Clear the cart after placing the order
+        CartItem.objects.filter(cart__user=request.user).delete()
+        
+        # Redirect to order success page with the order number
+        return redirect('product_page:order_success', order_number=order.order_number)
+
+    except Exception as e:
+        messages.error(request, f"An error occurred while placing the order: {e}")
+        return redirect('product_page:checkout')
+
+
+
+def order_success(request, order_number):
+    # Fetch the order using the order_number
+    order = get_object_or_404(Order, order_number=order_number)
+    
+    context = {
+        'order': order,
+        'order_number': order_number,
+    }
+
+    return render(request, 'user/order_success.html', context)

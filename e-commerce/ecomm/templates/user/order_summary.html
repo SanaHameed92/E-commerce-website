@@ -11,7 +11,7 @@
                     <h4 class="h5 mb-0">Shipping Address</h4>
                 </div>
                 <div class="card-body text-dark">
-                    <p class="mb-0">{{ selected_address.address }}</p>
+                    <p class="mb-0">{{ formatted_address }}</p>
                 </div>
             </div>
 
@@ -20,7 +20,7 @@
                     <h4 class="h5 mb-0">Payment Method</h4>
                 </div>
                 <div class="card-body text-dark">
-                    <p class="mb-0">{{ selected_address.payment_method }}</p>
+                    <p class="mb-0">{{ payment_method }}</p>
                 </div>
             </div>
 
@@ -40,7 +40,6 @@
                         <tbody>
                             {% for item in cart_items %}
                             <tr>
-                                
                                 <td>{{ item.title }}</td>
                                 <td class="text-center">{{ item.quantity }}</td>
                                 <td class="text-center">${{ item.total_price }}</td>
@@ -69,6 +68,12 @@
                     </ul>
                 </div>
             </div>
+
+            <!-- Place Order Button -->
+            <form action="{% url 'product_page:place_order' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary btn-lg">Place Order</button>
+            </form>
         </div>
     </div>
 </div>
