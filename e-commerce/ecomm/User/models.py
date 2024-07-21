@@ -18,7 +18,10 @@ class Address(models.Model):
     is_default = models.BooleanField(default=False)
     email = models.EmailField(max_length=255, blank=True, null=True)
 
-    
+    def get_full_address(self):
+        return (f"{self.first_name} {self.last_name}, {self.street_address}, {self.city}, "
+                f"{self.state}, {self.country}, {self.postal_code}")
+
     def __str__(self):
         return f"{self.street_address}, {self.city}, {self.state}, {self.country} - {self.postal_code}"
     
