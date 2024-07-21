@@ -190,6 +190,8 @@ def product_filter_by_color(request):
 def checkout(request):
     cart, created = Cart.objects.get_or_create(user=request.user)
     cart_items = CartItem.objects.filter(cart=cart)
+    
+    # Calculate total dynamically
     total = sum(item.total_price for item in cart_items)
     shipping_fee = 50 if total >= 350 else 0
     grand_total = total + shipping_fee
@@ -202,42 +204,45 @@ def checkout(request):
         order_notes = request.POST.get('order_notes')
 
         if address_id:
-            selected_address = Address.objects.get(id=address_id)
+            try:
+                selected_address = Address.objects.get(id=address_id)
+            except Address.DoesNotExist:
+                messages.error(request, "Selected address does not exist.")
+                return redirect('checkout')
+
+            # Format address manually
+            formatted_address = (f"{selected_address.first_name} {selected_address.last_name}, "
+                                  f"{selected_address.street_address}, {selected_address.city}, "
+                                  f"{selected_address.state}, {selected_address.country}, "
+                                  f"{selected_address.postal_code}")
+
+            # Convert Decimal to float
+            cart_items_data = [
+                {
+                    'title': item.product.title,
+                    'quantity': item.quantity,
+                    'total_price': float(item.total_price)  # Convert to float
+                } for item in cart_items
+            ]
+            request.session['cart_items'] = cart_items_data
+            request.session['total'] = float(total)  # Convert to float
+            request.session['shipping_fee'] = float(shipping_fee)  # Convert to float
+            request.session['grand_total'] = float(grand_total)  # Convert to float
+            request.session['selected_address'] = {
+                'address': formatted_address,
+                'payment_method': payment_method,
+            }
+            request.session.modified = True
+
+            return redirect('product_page:order_summary')
         else:
-            address_form = AddressForm(request.POST)
-
-            if address_form.is_valid():
-                new_address = address_form.save(commit=False)
-                new_address.user = request.user
-                new_address.save()
-                if new_address.is_default:
-                    Address.objects.filter(user=request.user).exclude(id=new_address.id).update(is_default=False)
-                address_id = new_address.id
-            else:
-            # Address was selected from existing addresses
-                address_id = address_id
-
-        selected_address = Address.objects.get(id=address_id)
-
-        # Pass the data to the order summary page
-        return redirect('product_page:order_summary', {
-            'cart_items': cart_items,
-            'total': total,
-            'shipping_fee': shipping_fee,
-            'grand_total': grand_total,
-            'selected_address': selected_address,
-            'payment_method': payment_method,
-            'order_notes': order_notes
-        })
-
-    else:
-        address_form = AddressForm()
+            messages.error(request, "Please select a shipping address.")
+            return redirect('checkout')
 
     context = {
         'cart_items': cart_items,
         'total': total,
         'addresses': addresses,
-        'address_form': address_form,
         'grand_total': grand_total,
         'shipping_fee': shipping_fee,
     }
@@ -245,14 +250,11 @@ def checkout(request):
     return render(request, 'user/checkout.html', context)
 
 def order_summary(request):
-    # Get data from the request
-    cart_items = request.GET.get('cart_items')
-    total = request.GET.get('total')
-    shipping_fee = request.GET.get('shipping_fee')
-    grand_total = request.GET.get('grand_total')
-    selected_address = request.GET.get('selected_address')
-    payment_method = request.GET.get('payment_method')
-    order_notes = request.GET.get('order_notes')
+    cart_items = request.session.get('cart_items', [])
+    total = request.session.get('total', 0)
+    shipping_fee = request.session.get('shipping_fee', 0)
+    grand_total = request.session.get('grand_total', 0)
+    selected_address = request.session.get('selected_address', {})
 
     context = {
         'cart_items': cart_items,
@@ -260,11 +262,10 @@ def order_summary(request):
         'shipping_fee': shipping_fee,
         'grand_total': grand_total,
         'selected_address': selected_address,
-        'payment_method': payment_method,
-        'order_notes': order_notes
     }
 
     return render(request, 'user/order_summary.html', context)
+
 
 def update_cart(request):
     if request.method == 'POST':

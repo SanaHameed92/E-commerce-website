@@ -17,7 +17,8 @@ urlpatterns = [
     path('product_filter_by_color/', views.product_filter_by_color, name='product_filter_by_color'),
     path('checkout/',views.checkout,name='checkout'),
     path('update/', views.update_cart, name='update_cart'),
-    path('order_summary/', views.order_summary, name='order_summary'),
+    path('order_summary/',views.order_summary,name='order_summary'),
+   
     
     
     

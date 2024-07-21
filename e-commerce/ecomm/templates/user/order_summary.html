@@ -1,63 +1,72 @@
-{% extends "base.html" %}
-{% load static %}
+{% extends 'base.html' %}
 
 {% block content %}
-<div class="site-section">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-12 mb-0">
-                <a href="{% url 'main_page:index' %}">Home</a> <span class="mx-2 mb-0">/</span>
-                <strong class="text-black">Order Summary</strong>
+<div class="container my-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h2 class="h4 text-dark mb-4">Order Summary</h2>
+
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="h5 mb-0">Shipping Address</h4>
+                </div>
+                <div class="card-body text-dark">
+                    <p class="mb-0">{{ selected_address.address }}</p>
+                </div>
             </div>
-        </div>
 
-        <div class="row mt-5">
-            <div class="col-md-12">
-                <h2 class="h3 mb-3 text-black">Order Summary</h2>
-                <div class="p-3 p-lg-5 border">
-                    <h4>Delivery Address:</h4>
-                    <p>{{ selected_address.first_name }} {{ selected_address.last_name }}</p>
-                    <p>{{ selected_address.street_address }}, {{ selected_address.city }}, {{ selected_address.state }}, {{ selected_address.country }} - {{ selected_address.postal_code }}</p>
-                    <p>Phone: {{ selected_address.phone_number }}</p>
-                    <p>Email: {{ selected_address.email }}</p>
-                    
-                    <h4>Order Notes:</h4>
-                    <p>{{ order_notes }}</p>
-                    
-                    <h4>Payment Method:</h4>
-                    <p>{{ payment_method }}</p>
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="h5 mb-0">Payment Method</h4>
+                </div>
+                <div class="card-body text-dark">
+                    <p class="mb-0">{{ selected_address.payment_method }}</p>
+                </div>
+            </div>
 
-                    <h4>Your Order:</h4>
-                    <table class="table site-block-order-table mb-5">
-                        <thead>
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="h5 mb-0">Order Details</h4>
+                </div>
+                <div class="card-body">
+                    <table class="table table-striped table-bordered">
+                        <thead class="thead-dark">
                             <tr>
-                                <th>Product</th>
-                                <th>Total</th>
+                                <th class="text-center">Product</th>
+                                <th class="text-center">Quantity</th>
+                                <th class="text-center">Total</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for item in cart_items %}
                             <tr>
-                                <td>{{ item.product.title }} <strong class="mx-2">x</strong> {{ item.quantity }}</td>
-                                <td>${{ item.total_price }}</td>
+                                
+                                <td>{{ item.title }}</td>
+                                <td class="text-center">{{ item.quantity }}</td>
+                                <td class="text-center">${{ item.total_price }}</td>
                             </tr>
                             {% endfor %}
-                            <tr>
-                                <td class="text-black font-weight-bold"><strong>Cart Subtotal</strong></td>
-                                <td class="text-black">${{ total }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-black font-weight-bold"><strong>Shipping</strong></td>
-                                <td class="text-black">${{ shipping_fee }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-black font-weight-bold"><strong>Order Total</strong></td>
-                                <td class="text-black font-weight-bold">
-                                    <strong>${{ grand_total }}</strong>
-                                </td>
-                            </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="h5 mb-0">Summary</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="d-flex justify-content-between">
+                            <strong>Total:</strong> <span>${{ total }}</span>
+                        </li>
+                        <li class="d-flex justify-content-between">
+                            <strong>Shipping Fee:</strong> <span>${{ shipping_fee }}</span>
+                        </li>
+                        <li class="d-flex justify-content-between">
+                            <strong>Grand Total:</strong> <span>${{ grand_total }}</span>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>

@@ -7,7 +7,6 @@
         <div class="row">
             <div class="col-md-12 mb-0">
                 <a href="{% url 'main_page:index' %}">Home</a> <span class="mx-2 mb-0">/</span>
-                <a href="{% url 'product_page:shop' %}">Shop</a> <span class="mx-2 mb-0">/</span>
                 <a href="{% url 'product_page:cart' %}">Cart</a> <span class="mx-2 mb-0">/</span>
                 <strong class="text-black">Checkout</strong>
             </div>
@@ -17,157 +16,94 @@
 
 <div class="site-section">
     <div class="container">
-        <div class="row">
-            <div class="col-md-6 mb-5 mb-md-0">
-                <form method="post" action="" onsubmit="console.log('Form submitted');">
-                    {% csrf_token %}
-                    <h2 class="h3 mb-3 text-black">Delivery Address</h2>
-                    <div class="p-3 p-lg-5 border">
-                        <div class="form-group">
-                            <label for="address_select" class="text-black">Select Address</label>
-                            <select id="address_select" name="selected_address" class="form-control">
-                                <option value="">Choose an address</option>
-                                {% for address in addresses %}
-                                <option value="{{ address.id }}"> {{ address.first_name }} {{ address.last_name }} {{ address.street_address }}, {{ address.city }}, {{ address.state }}, {{ address.country }} - {{ address.postal_code }}</option>
-                                {% endfor %}
-                                <option value="new">Add a new address</option>
-                            </select>
-                        </div>
+        <form method="post" action="#">
+            {% csrf_token %}
+            <div class="row mb-5">
+                <div class="col-md-12">
+                    <h2 class="text-black h4">Shipping Address</h2>
+                    <div class="form-group">
+                        <label for="selected_address">Select Address</label>
+                        <select id="selected_address" name="selected_address" class="form-control">
+                            {% for address in addresses %}
+                                <option value="{{ address.id }}" {% if address.id == selected_address.id %}selected{% endif %}>
+                                    {{ address.street_address }}, {{ address.city }}, {{ address.state }}, {{ address.country }}, {{ address.postal_code }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <h2 class="text-black h4">Payment Method</h2>
+                    <div class="form-group">
+                        <label for="payment_method">Select Payment Method</label>
+                        <select id="payment_method" name="payment_method" class="form-control">
+                            <option value="credit_card">Credit Card</option>
+                            <option value="paypal">PayPal</option>
+                            <option value="COD">Cash on Delivery</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <h2 class="text-black h4">Order Summary</h2>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                               
+                                <th class="product-name">Product</th>
+                                <th class="product-price">Price</th>
+                                <th class="product-quantity">Quantity</th>
+                                <th class="product-total">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in cart_items %}
+                            <tr>
+                                
+                                <td class="product-name">
+                                    <h2 class="h5 text-black">{{ item.product.title }}</h2>
+                                </td>
+                                <td>${{ item.product.original_price }}</td>
+                                <td>{{ item.quantity }}</td>
+                                <td>${{ item.total_price }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
 
-                        <div id="new_address_form" style="display:none;">
-                            <!-- New Address Fields -->
-                            <div class="form-group">
-                                <label for="country" class="text-black">Country <span class="text-danger">*</span></label>
-                                <select id="country" name="country" class="form-control">
-                                    <option value="">Select a country</option>
-                                    <option value="United States">United States</option>
-                                    <!-- Add other countries as needed -->
-                                </select>
-                            </div>
-                            <div class="form-group row">
-                                <div class="col-md-6">
-                                    <label for="first_name" class="text-black">First Name <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="first_name" name="first_name" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="last_name" class="text-black">Last Name <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="last_name" name="last_name" required>
-                                </div>
-                            </div>
-                            <div class="form-group row">
-                                <div class="col-md-12">
-                                    <label for="address_line1" class="text-black">Address Line 1 <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="address_line1" name="street_address" placeholder="Street address" required>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="address_line2" class="text-black">Address Line 2</label>
-                                <input type="text" class="form-control" id="address_line2" name="address_line2" placeholder="Apartment, suite, unit etc. (optional)">
-                            </div>
-                            <div class="form-group row">
-                                <div class="col-md-6">
-                                    <label for="city" class="text-black">City <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="city" name="city" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="state" class="text-black">State <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="state" name="state" required>
-                                </div>
-                            </div>
-                            <div class="form-group row">
-                                <div class="col-md-6">
-                                    <label for="postal_code" class="text-black">Postal / Zip <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="postal_code" name="postal_code" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="phone" class="text-black">Phone <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="phone" name="phone_number" placeholder="Phone Number" required>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="email" class="text-black">Email Address <span class="text-danger">*</span></label>
-                                <input type="email" class="form-control" id="email" name="email" required>
-                            </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <span class="text-black">Subtotal</span>
                         </div>
-
-                        <div class="form-group">
-                            <label for="order_notes" class="text-black">Order Notes</label>
-                            <textarea name="order_notes" id="order_notes" cols="30" rows="5" class="form-control" placeholder="Write your notes here..."></textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="payment_method" class="text-black">Payment Method</label>
-                            <select id="payment_method" name="payment_method" class="form-control">
-                                <option value="cash_on_delivery">Cash on Delivery</option>
-                                <option value="paypal">PayPal</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <button type="submit" class="btn btn-primary btn-lg btn-block">Place Order</button>
-                            <a href="{% url 'product_page:order_summary' %}" class="btn btn-secondary btn-lg btn-block">Order Summary</a>
+                        <div class="col-md-6 text-right">
+                            <strong class="text-black">${{ total }}</strong>
                         </div>
                     </div>
-                </form>
-            </div>
-
-            <div class="col-md-6">
-                <div class="row mb-5">
-                    <div class="col-md-12">
-                        <h2 class="h3 mb-3 text-black">Your Order</h2>
-                        <div class="p-3 p-lg-5 border">
-                            <table class="table site-block-order-table mb-5">
-                                <thead>
-                                    <tr>
-                                        <th>Product</th>
-                                        <th>Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in cart_items %}
-                                    <tr>
-                                        <td>{{ item.product.title }} <strong class="mx-2">x</strong> {{ item.quantity }}</td>
-                                        <td>${{ item.total_price }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                    <tr>
-                                        <td class="text-black font-weight-bold"><strong>Cart Subtotal</strong></td>
-                                        <td class="text-black">${{ total }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-black font-weight-bold"><strong>Shipping</strong></td>
-                                        <td class="text-black">${{ shipping_fee }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-black font-weight-bold"><strong>Order Total</strong></td>
-                                        <td class="text-black font-weight-bold">
-                                            <strong>${{ grand_total }}</strong>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <span class="text-black">Shipping Fee</span>
+                        </div>
+                        <div class="col-md-6 text-right">
+                            <strong class="text-black">${{ shipping_fee }}</strong>
+                        </div>
+                    </div>
+                    <div class="row mb-5">
+                        <div class="col-md-6">
+                            <span class="text-black">Total</span>
+                        </div>
+                        <div class="col-md-6 text-right">
+                            <strong class="text-black">${{ grand_total }}</strong>
                         </div>
                     </div>
                 </div>
+
             </div>
 
-        </div>
+            
+
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <button type="submit" class="btn btn-primary btn py-3">Place Order</button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var addressSelect = document.getElementById('address_select');
-        var newAddressForm = document.getElementById('new_address_form');
-
-        addressSelect.addEventListener('change', function() {
-            if (addressSelect.value === 'new') {
-                newAddressForm.style.display = 'block';
-            } else {
-                newAddressForm.style.display = 'none';
-            }
-        });
-    });
-</script>
-
 {% endblock %}
