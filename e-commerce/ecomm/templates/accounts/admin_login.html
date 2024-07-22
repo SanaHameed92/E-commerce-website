@@ -11,13 +11,7 @@
                         <div class="card shadow-2-strong" style="border-radius: 1rem;">
                             <div class="card-body p-5 text-center">
                                 <h3 class="mb-5">Admin Log in</h3>
-                                {% if messages %}
-                                        {% for message in messages %}
-                                            <div class="alert alert-{{ message.tags }}">
-                                                {{ message }}
-                                            </div>
-                                        {% endfor %}
-                                    {% endif %}
+                               
 
                                 <form action="{% url 'admin_login' %}" method="POST">
                                     {% csrf_token %}

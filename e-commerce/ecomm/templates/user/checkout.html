@@ -16,6 +16,14 @@
 
 <div class="site-section">
     <div class="container">
+        <!-- Add Back to Cart Button and Add New Address Button -->
+        <div class="row mb-3">
+            <div class="col-md-12 text-center">
+                <a href="{% url 'product_page:cart' %}" class="btn btn-secondary py-2">Back to Cart</a>
+                <a href="{% url 'add_address' %}" class="btn btn-primary py-2 ml-2">Add New Address</a>
+            </div>
+        </div>
+
         <form method="post" action="#">
             {% csrf_token %}
             <div class="row mb-5">
@@ -46,7 +54,6 @@
                     <table class="table table-bordered">
                         <thead>
                             <tr>
-                               
                                 <th class="product-name">Product</th>
                                 <th class="product-price">Price</th>
                                 <th class="product-quantity">Quantity</th>
@@ -56,7 +63,6 @@
                         <tbody>
                             {% for item in cart_items %}
                             <tr>
-                                
                                 <td class="product-name">
                                     <h2 class="h5 text-black">{{ item.product.title }}</h2>
                                 </td>
@@ -93,10 +99,7 @@
                         </div>
                     </div>
                 </div>
-
             </div>
-
-            
 
             <div class="row">
                 <div class="col-md-12 text-center">

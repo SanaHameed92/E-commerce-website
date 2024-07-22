@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .order-detail-container {
+        margin-top: 50px;
+    }
+
+    .order-detail-container h2 {
+        margin-bottom: 30px;
+        color: #343a40;
+    }
+
+    .order-detail-container h3 {
+        color: #007bff;
+        margin-bottom: 15px;
+    }
+
+    .order-detail-container p {
+        font-size: 1.1rem;
+        color: #495057;
+    }
+
+    .order-detail-container h4 {
+        margin-top: 20px;
+        color: #28a745;
+    }
+
+    .order-detail-container .order-items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    .order-detail-container .order-items-table th,
+    .order-detail-container .order-items-table td {
+        padding: 10px;
+        text-align: left;
+        border: 1px solid #dee2e6;
+    }
+
+    .order-detail-container .order-items-table th {
+        background-color: #f8f9fa;
+        color: #343a40;
+    }
+
+    .order-detail-container .order-items-table td {
+        background-color: #ffffff;
+    }
+
+    .order-detail-container .order-items-table .item-name {
+        color: #007bff;
+    }
+
+    .order-detail-container .order-items-table .item-price {
+        color: #ff5722;
+        font-weight: bold;
+    }
+
+    .order-detail-container .order-items-table .item-image img {
+        width: 50px; /* Adjust as needed */
+        height: 50px; /* Adjust as needed */
+        object-fit: cover;
+        border-radius: 4px;
+    }
+
+    .back-button, .cancel-button {
+        margin-top: 20px;
+        display: inline-block;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        text-align: center;
+    }
+
+    .back-button {
+        background-color: #007bff;
+        color: #fff;
+    }
+
+    .back-button:hover {
+        background-color: #0056b3;
+    }
+
+    .cancel-button {
+        background-color: #dc3545;
+        color: #fff;
+    }
+
+    .cancel-button:hover {
+        background-color: #c82333;
+    }
+
+    .status-pending {
+        color: #007bff !important; /* Blue color */
+    }
+
+    .status-cancelled {
+        color: #dc3545 !important; /* Red color */
+    }
+</style>
+
+<div class="container order-detail-container">
+    <h2>Order Details</h2>
+    <div class="row">
+        <div class="col-md-12">
+            <h3>Order Number: {{ order.order_number }}</h3>
+            <p>Date: {{ order.created_at|date:"Y-m-d H:i" }}</p>
+            <p class="{% if order.status == 'Pending' %}status-pending{% elif order.status == 'Cancelled' %}status-cancelled{% endif %}">
+                Status: {{ order.status }}
+            </p>
+            <p>Total: ${{ order.grand_total|floatformat:2 }}</p>
+            <!-- Add more order details as needed -->
+            <h4>Items:</h4>
+            <table class="order-items-table">
+                <thead>
+                    <tr>
+                        <th>Image</th>
+                        <th>Product Name</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items.all %}
+                    <tr>
+                        <td class="item-image">
+                            <img src="{{ item.product.product_image.url }}" alt="{{ item.product.title }}">
+                        </td>
+                        <td class="item-name">
+                            <a href="{% url 'product_page:shop-single' item.product.id %}">{{ item.product.title }}</a>
+                        </td>
+                        <td>{{ item.quantity }}</td>
+                        <td class="item-price">${{ item.total_price|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <a href="{% url 'my_orders' %}" class="back-button">Back to My Orders</a>
+            {% if order.status != 'Cancelled' and order.status != 'delivered' %}
+            <a href="{% url 'cancel_order' order.id %}" class="cancel-button" onclick="return confirm('Are you sure you want to cancel this order?')">Cancel Order</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

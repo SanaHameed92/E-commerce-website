@@ -1,0 +1,95 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Order List - Admin Dashboard</title>
+    <link rel="stylesheet" href="{% static 'admin/css/fontawesome.min.css' %}">
+    <link rel="stylesheet" href="{% static 'admin/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'admin/css/templatemo-style.css' %}">
+    <link rel="stylesheet" href="{% static 'admin/css/custom.css' %}"> <!-- Custom styles for this page -->
+    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+</head>
+<body>
+    <div class="container">
+        <h1 class="my-4">Order List</h1>
+        
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Order Number</th>
+                    <th>Customer</th>
+                    <th>Payment Method</th>
+                    <th>Delivery Address</th>
+                    <th>Delivery Charge</th>
+                    <th>Total</th>
+                    <th>Order Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>{{ order.order_number }}</td>
+                    <td>{{ order.user }}</td>
+                    <td>{{ order.payment_method }}</td>
+                    <td>{{ order.address }}</td>
+                    <td>${{ order.shipping_fee }}</td>
+                    <td>${{ order.grand_total }}</td>
+                    <td>{{ order.status }}</td>
+                    <td>
+                        <button class="btn btn-primary btn-sm update-status-btn" data-order-id="{{ order.id }}" data-current-status="{{ order.status }}">Update Status</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- Status Update Modal -->
+        <div class="modal fade" id="statusModal" tabindex="-1" role="dialog" aria-labelledby="statusModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="statusModalLabel">Update Order Status</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="statusForm" method="post" action="{% url 'update_order_status' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="order_id" id="order_id">
+                            <div class="form-group">
+                                <label for="status">Select New Status</label>
+                                <select class="form-control" name="status" id="status">
+                                    <option value="ordered">Ordered</option>
+                                    <option value="shipped">Shipped</option>
+                                    <option value="delivered">Delivered</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Update Status</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            $('.update-status-btn').on('click', function() {
+                var orderId = $(this).data('order-id');
+                var currentStatus = $(this).data('current-status');
+                $('#order_id').val(orderId);
+                $('#status').val(currentStatus);
+                $('#statusModal').modal('show');
+            });
+        });
+    </script>
+</body>
+</html>

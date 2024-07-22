@@ -64,3 +64,4 @@ class CartUpdateForm(forms.Form):
                 max_value=item.product.max_qty_per_person,
                 label=item.product.title
             )
+
