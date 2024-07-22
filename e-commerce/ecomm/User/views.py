@@ -6,6 +6,8 @@ from .models import Address
 from .forms import AddressForm
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
+from products.models import Order
+from django.views.decorators.http import require_POST
 
 User = get_user_model()
 
@@ -107,5 +109,53 @@ def reset_password(request):
 
     return render(request, 'user/profile.html', {'form': form})
 
+def my_orders(request):
+    orders = Order.objects.filter(user=request.user).order_by('-created_at')
+    return render(request, 'user/my_orders.html', {'orders': orders})
 
 
+def order_detail(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    return render(request, 'user/order_detail.html', {'order': order})
+
+
+def cancel_order(request, order_id):
+    # Fetch the order for the current user
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    
+    # Check if the order is not already cancelled
+    if order.status != 'Cancelled':
+        # Update the status to 'Cancelled'
+        order.status = 'Cancelled'
+        
+        # Restore product quantities
+        for item in order.items.all():
+            product = item.product
+            product.quantity += item.quantity
+            product.save()
+        
+        # Save the updated order status
+        order.save()
+
+        # Display a success message
+        messages.success(request, "Order cancelled successfully!")
+    else:
+        # If the order is already cancelled, display an info message
+        messages.info(request, "Order is already cancelled.")
+    
+    # Redirect to the order detail or any other page you prefer
+    return redirect('order_detail', order_id=order_id)
+
+
+def order_list(request):
+    orders = Order.objects.all().order_by('-created_at')  # Adjust according to your model and filtering needs
+    return render(request, 'admin_side/order_list.html', {'orders': orders})
+
+@require_POST
+def update_order_status(request):
+    order_id = request.POST.get('order_id')
+    new_status = request.POST.get('status')
+    order = Order.objects.get(id=order_id)
+    order.status = new_status
+    order.save()
+    return redirect('order_list')

@@ -94,7 +94,8 @@ def shop_single(request, product_id):
     context = {
         'product': product,
         'featured_items': features_products,
-        'product_error': request.session.pop('product_error', None)
+        'product_error': request.session.pop('product_error', None),
+        'availability_message': "Only 1 item left" if product.quantity == 1 else ""
     }
     return render(request, 'shop-single.html', context)
 
@@ -326,9 +327,6 @@ def place_order(request):
     if not cart_items_data or not address_id:
         messages.error(request, "Incomplete order details.")
         return redirect('product_page:checkout')
-
-  
-
     try:
 
         selected_address = Address.objects.get(id=address_id)
@@ -353,6 +351,9 @@ def place_order(request):
                 quantity=item_data['quantity'],
                 total_price=item_data['total_price']
             )
+
+            product.quantity -= item_data['quantity']
+            product.save()
 
         # Clear the cart after placing the order
         CartItem.objects.filter(cart__user=request.user).delete()

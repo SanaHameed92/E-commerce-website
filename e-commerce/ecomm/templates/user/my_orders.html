@@ -1,0 +1,133 @@
+{% extends "user/profile.html" %}
+
+{% block content %}
+<style>
+    .orders-container {
+        margin-top: 50px;
+    }
+
+    .orders-container h2 {
+        margin-bottom: 30px;
+        color: #343a40;
+    }
+
+    .orders-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+
+    .orders-table th,
+    .orders-table td {
+        padding: 15px;
+        text-align: left;
+        border: 1px solid #dee2e6;
+    }
+
+    .orders-table th {
+        background-color: #f8f9fa;
+        color: #343a40;
+    }
+
+    .orders-table td {
+        background-color: #ffffff;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+        color: #fff;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #004085;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        border-color: #6c757d;
+        color: #fff;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+        border-color: #545b62;
+    }
+
+    .no-orders {
+        color: #6c757d;
+        font-size: 1.2rem;
+    }
+
+    .status-pending {
+        color:#007bff !important;
+        font-weight: bold;
+    }
+
+    .status-completed {
+        color: #28a745;
+        font-weight: bold;
+    }
+
+    .status-cancelled {
+        color: #dc3545;
+        font-weight: bold;
+    }
+
+    .total-amount {
+        color: #ff5722;
+        font-weight: bold;
+    }
+</style>
+
+<div class="container orders-container">
+    <h2>My Orders</h2>
+    
+    <!-- Back to Profile Button -->
+    <div class="mb-4">
+        <a href="{% url 'profile' %}" class="btn btn-secondary btn-lg">Back to Profile</a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            {% if orders %}
+                <table class="table orders-table">
+                    <thead>
+                        <tr>
+                            <th>Order Number</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Total</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td>{{ order.order_number }}</td>
+                            <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                {% if order.status == 'pending' %}
+                                    <span class="status-pending">{{ order.status|capfirst }}</span>
+                                {% elif order.status == 'completed' %}
+                                    <span class="status-completed">{{ order.status|capfirst }}</span>
+                                {% elif order.status == 'cancelled' %}
+                                    <span class="status-cancelled">{{ order.status|capfirst }}</span>
+                                {% else %}
+                                    {{ order.status|capfirst }}
+                                {% endif %}
+                            </td>
+                            <td class="total-amount">${{ order.grand_total|floatformat:2 }}</td>
+                            <td><a href="{% url 'order_detail' order.id %}" class="btn btn-primary btn-sm">View Details</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="no-orders">You have no orders.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

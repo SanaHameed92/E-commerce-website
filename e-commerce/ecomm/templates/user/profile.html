@@ -89,8 +89,9 @@
                             Manage Address
                         </a>
                     </li>
+                    {% url 'my_orders' as my_orders_url %}
                     <li class="nav-item">
-                        <a class="nav-link" href="#">
+                        <a class="nav-link {% if request.path == my_orders_url %}active{% endif %}" href="{{ my_orders_url }}">
                             <i class="fa fa-shopping-cart"></i>
                             My Orders
                         </a>

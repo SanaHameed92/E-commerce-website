@@ -38,7 +38,7 @@
         top: 0;
         height: 100%;
         padding-top: .5rem;
-        margin-bottom:20px;
+        margin-bottom: 20px;
     }
 
     /* Optional: Customize profile page layout */
@@ -60,6 +60,7 @@
         border: 1px solid #ccc;
         border-radius: 5px;
     }
+
     .active {
         font-weight: bold;
         background-color: #e9ecef; /* Light gray background for active link */
@@ -149,6 +150,10 @@
                         {% else %}
                             <p>No addresses added yet.</p>
                         {% endif %}
+                    </div>
+                    <!-- Add Checkout Button -->
+                    <div class="mt-4 text-center">
+                        <a href="{% url 'product_page:checkout' %}" class="btn btn-success">Proceed to Checkout</a>
                     </div>
                 </div>
             </div>
