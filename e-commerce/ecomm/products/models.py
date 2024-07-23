@@ -23,7 +23,7 @@ class Category(models.Model):
 
 class Brand(models.Model):
     brand_name = models.CharField(max_length=255)
-    category = models.ForeignKey(Category, related_name='brands', on_delete=models.CASCADE)
+    category = models.ManyToManyField(Category, related_name='brands')
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
@@ -102,7 +102,7 @@ class ProductImage(models.Model):
 
 class Order(models.Model):
     STATUS_CHOICES = (
-        ('Pending', 'Pending'),
+        ('Ordered', 'Ordered'),
         ('Shipped', 'Shipped'),
         ('Delivered', 'Delivered'),
         ('Cancelled', 'Cancelled'),

@@ -1,5 +1,16 @@
 {% extends "admin_base.html" %}
 {% block content %}
+{% if messages %}
+    <div class="alert alert-info">
+        {% for message in messages %}
+            {% if 'product_update' in message.tags %}
+                <div class="alert alert-{{ message.tags }} mt-2">
+                    {{ message }}
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+{% endif %}
 <div class="container mt-5">
     <div class="row tm-content-row">
         <div class="col-sm-12 col-md-12 col-lg-8 col-xl-8 tm-block-col">

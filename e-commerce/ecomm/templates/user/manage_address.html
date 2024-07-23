@@ -90,8 +90,9 @@
                             Manage Address
                         </a>
                     </li>
+                    {% url 'my_orders' as my_orders_url %}
                     <li class="nav-item">
-                        <a class="nav-link" href="#">
+                        <a class="nav-link {% if request.path == my_orders_url %}active{% endif %}" href="{{ my_orders_url }}">
                             <i class="fa fa-shopping-cart"></i>
                             My Orders
                         </a>
@@ -120,13 +121,7 @@
 
         <main role="main" class="col-md-9 ml-sm-auto col-lg-9 px-md-4 mt-5">
             <div class="profile-content">
-                {% if messages %}
-                    {% for message in messages %}
-                    <div class="alert alert-success" role="alert">
-                        {{ message }}
-                    </div>
-                    {% endfor %}
-                {% endif %}
+               
                 <!-- Manage Address Section -->
                 <div class="address-section">
                     <a href="{% url 'add_address' %}" class="btn btn-primary mb-3">Add New Address</a>

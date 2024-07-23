@@ -1,3 +1,4 @@
+from uuid import uuid4
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -112,16 +113,18 @@ def reset_password(request):
 def my_orders(request):
     orders = Order.objects.filter(user=request.user).order_by('-created_at')
     return render(request, 'user/my_orders.html', {'orders': orders})
+    
 
 
-def order_detail(request, order_id):
-    order = get_object_or_404(Order, id=order_id, user=request.user)
+def order_detail(request, order_number):
+    order = get_object_or_404(Order, order_number=order_number, user=request.user)
     return render(request, 'user/order_detail.html', {'order': order})
 
 
-def cancel_order(request, order_id):
+def cancel_order(request, order_number):
     # Fetch the order for the current user
-    order = get_object_or_404(Order, id=order_id, user=request.user)
+    
+    order = get_object_or_404(Order, order_number=order_number, user=request.user)
     
     # Check if the order is not already cancelled
     if order.status != 'Cancelled':
@@ -144,7 +147,7 @@ def cancel_order(request, order_id):
         messages.info(request, "Order is already cancelled.")
     
     # Redirect to the order detail or any other page you prefer
-    return redirect('order_detail', order_id=order_id)
+    return redirect('order_detail', order_number=order_number)
 
 
 def order_list(request):
