@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate, login, logout as auth_logout
 from django.contrib.auth import login as auth_login
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from products.models import Brand, Color, Product, Category,ProductImage, Size
+from products.models import Brand, Color, Order, Product, Category,ProductImage, Size
 from products.forms import BrandForm, CategoryForm, ColorForm, ProductForm, ProductImageForm, SizeForm
 from .forms import AdminLoginForm, SignupForm, LoginForm
 from django.contrib.auth import get_user_model
@@ -85,18 +85,8 @@ def signup(request):
               # Save the user
 
             send_otp_email(user.email, user.otp)
-            #email = form.cleaned_data.get('email')  # Get the email from the form
-            #raw_password = form.cleaned_data.get('password')  # Get the raw password from the form
-            
-            #print(f"New User Registered - Email: {email}, Password: {raw_password}")
-            
-            #user = authenticate(username=email, password=raw_password)  # Authenticate the user
-            
-            #print(f"Authenticated User: {user}")
-            
-            #if user is not None:
-                #login(request, user)  # Log in the user
-            messages.success(request, 'Account created successfully. You can now log In.')
+           
+            messages.success(request, 'OTP has been sent to your email address. Please verify.', extra_tags='otp')
             return redirect('verify_otp', user_id=user.pk, scenario='signup')  # Redirect to the shop page after successful login
             #else:
                 #messages.error(request, 'Account created but unable to log in. Please try logging in manually.')
@@ -111,8 +101,9 @@ def signup(request):
     return render(request, 'accounts/signup.html', {'form': form})
 
 def admin_dashboard(request):
+    orders = Order.objects.all()
     if request.user.is_authenticated and request.user.is_staff:
-        return render(request, 'accounts/admin_dashboard.html')
+        return render(request, 'accounts/admin_dashboard.html', {'orders': orders})
     else:
         return redirect('product_page:index')
 
@@ -131,11 +122,11 @@ def admin_products(request):
 
         if category_form.is_valid():
             category_form.save()
-            messages.success(request, 'Category added successfully.')
+            messages.success(request, 'Category added successfully.', extra_tags='product_update')
             return redirect('admin_products')
         elif brand_form.is_valid():
             brand_form.save()
-            messages.success(request, 'Brand added successfully.')
+            messages.success(request, 'Brand added successfully.', extra_tags='product_update')
             return redirect('admin_products')
         elif size_form.is_valid():
             size_form.save()
@@ -182,6 +173,7 @@ def edit_product(request, pk):
             product_instance.updated_by = request.user  # Assuming you have an updated_by field
             product.sizes.set(form.cleaned_data['sizes'])
             product.colors.set(form.cleaned_data['colors'])
+          
             product_instance.save()
 
             for image in existing_images:
@@ -190,10 +182,10 @@ def edit_product(request, pk):
                     image.image = request.FILES[image_field_name]
                     image.save()
 
-            messages.success(request, 'Product updated successfully.')
+            messages.success(request, 'Product updated successfully.', extra_tags='product_update')
             return redirect('admin_products')
         else:
-            messages.error(request, 'Please correct the errors below.')
+            messages.error(request, 'Please correct the errors below.', extra_tags='product_update')
     else:
         form = ProductForm(instance=product)
         image_form = ProductImageForm()
@@ -220,7 +212,7 @@ def delete_product(request, pk):
             product.availability_status = 'in_stock'
         product.save()
         
-        messages.success(request, f'Availability of "{product.title}" changed successfully.')
+        messages.success(request, f'Availability of "{product.title}" changed successfully.', extra_tags='product_update')
         return redirect('admin_products')  # Redirect to the product list page or wherever appropriate
     
     return render(request, 'admin_side/confirm_delete_product.html', {'product': product})
@@ -234,7 +226,7 @@ def delete_category(request, pk):
         category.is_active = not category.is_active  # Assuming 'is_active' is a BooleanField
         category.save()
         
-        messages.success(request, 'Category made inactive successfully.')
+        messages.success(request, 'Category status changed successfully.', extra_tags='product_update')
         return redirect('admin_products')  # Redirect to the admin products page or appropriate view
     
     return render(request, 'admin_side/confirm_delete_category.html', {'category': category})
@@ -289,11 +281,11 @@ def forgot_password(request):
 
                 #send_otp_email(email, otp)
                 send_otp_email(user.email, user.otp)
-                messages.success(request, 'OTP has been sent to your email address.')
+                messages.success(request, 'OTP has been sent to your email address.', extra_tags='otp')
                 return redirect('verify_otp', user.pk, 'forgot_password')
             #except UserModel.DoesNotExist:
             except Account.DoesNotExist:
-                messages.error(request, 'No account found with this email address.')
+                messages.error(request, 'No account found with this email address.', extra_tags='otp')
     else:
         form = CustomPasswordResetForm()
 
@@ -301,7 +293,7 @@ def forgot_password(request):
 
 def verify_otp(request, user_id, scenario):
     try:
-        user = UserModel.objects.get(pk=user_id)
+        user = UserModel.objects.get(pk=user_id)    
     except UserModel.DoesNotExist:
         messages.error(request, "Invalid user.")
         return redirect('login')
@@ -317,6 +309,7 @@ def verify_otp(request, user_id, scenario):
                 if scenario == 'signup':
                     user.backend = 'django.contrib.auth.backends.ModelBackend'  # Set the authentication backend
                     auth_login(request, user)
+                    messages.success(request, 'OTP verified successfully. Now you can log in.')
                     return redirect('login')
                 elif scenario == 'forgot_password':
                     uid = urlsafe_base64_encode(force_bytes(user.pk))
@@ -343,6 +336,12 @@ class CustomPasswordResetConfirmView(PasswordResetConfirmView):
     template_name = 'accounts/password_reset_confirm.html'
     success_url = reverse_lazy('login')
     form_class = CustomSetPasswordForm
+
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, "Password changed successfully. Now you can log in.")
+        return response
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

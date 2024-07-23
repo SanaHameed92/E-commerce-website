@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import uuid
 from django.shortcuts import render, get_object_or_404
 from .models import Cart, CartItem, Order, OrderItem, Product, Category, Brand, Size, Color
@@ -89,13 +90,16 @@ def shop(request):
 def shop_single(request, product_id):
     product = get_object_or_404(Product, pk=product_id)
     features_products = Product.objects.filter(trending=True)[:3]
-    
+
+    # Check if there was an error related to exceeding quantity
+    product_error = request.session.pop('product_error', None)
+    if product_error:
+        messages.error(request, product_error)
 
     context = {
         'product': product,
         'featured_items': features_products,
-        'product_error': request.session.pop('product_error', None),
-        'availability_message': "Only 1 item left" if product.quantity == 1 else ""
+        'availability_message': "Only 1 item left" if product.quantity == 1 else "",
     }
     return render(request, 'shop-single.html', context)
 
@@ -116,17 +120,11 @@ def add_to_cart(request, product_id):
     
     if not item_created:
         if cart_item.quantity + quantity > product.quantity:
-            request.session['product_error'] = {
-                'product_id': product_id,
-                'message': 'Maximum stock limit reached for this product.'
-            }
+            messages.error(request, 'Maximum stock limit reached for this product.')
             return redirect('product_page:shop-single', product_id=product.id)
         
         if cart_item.quantity + quantity > product.max_qty_per_person:
-            request.session['product_error'] = {
-                'product_id': product_id,
-                'message': f'You can only add up to {product.max_qty_per_person} items of this product.'
-            }
+            messages.error(request, f'You can only add up to {product.max_qty_per_person} items of this product.')
             return redirect('product_page:shop-single', product_id=product.id)
         
         cart_item.quantity += quantity
@@ -135,7 +133,6 @@ def add_to_cart(request, product_id):
         cart_item.quantity = quantity
         cart_item.save()
 
-    messages.success(request, 'Product added to cart!')
 
     referrer = request.META.get('HTTP_REFERER', '')
 
@@ -150,11 +147,16 @@ def cart(request):
     cart_items = CartItem.objects.filter(cart=cart)
     cart_items_count = cart_items.count()
     
+    # Retrieve any product error message from the session
+    product_error = request.session.pop('product_error', None)
+    
     context = {
         'cart_items': cart_items,
         'total': sum(item.total_price for item in cart_items),
         'cart_items_count': cart_items_count,
+        'product_error': product_error
     }
+    
     return render(request, 'cart.html', context)
 
 def remove_from_cart(request, cart_item_id):
@@ -196,8 +198,13 @@ def checkout(request):
     
     # Calculate totals and fees
     total = sum(item.total_price for item in cart_items)
-    shipping_fee = 50 if total >= 350 else 0
+    shipping_fee = 50 if total >= 350 else 0    
     grand_total = total + shipping_fee
+
+    # Calculate the estimated delivery date (e.g., 5 days from now)
+    delivery_days = 5
+    estimated_delivery_date = datetime.now() + timedelta(days=delivery_days)
+    formatted_delivery_date = estimated_delivery_date.strftime('%d %b %Y')  # Format as "25 Jul 2024"
 
     # Get user's addresses
     addresses = Address.objects.filter(user=request.user)
@@ -238,6 +245,7 @@ def checkout(request):
                 'id': selected_address.id,
                 'payment_method': payment_method,
             }
+            request.session['estimated_delivery_date'] = formatted_delivery_date  # Add estimated delivery date
             request.session.modified = True
 
             return redirect('product_page:order_summary')
@@ -251,6 +259,7 @@ def checkout(request):
         'addresses': addresses,
         'grand_total': grand_total,
         'shipping_fee': shipping_fee,
+        'formatted_delivery_date': formatted_delivery_date,  # Pass to template context
     }
 
     return render(request, 'user/checkout.html', context)
@@ -280,7 +289,8 @@ def order_summary(request):
 
 def update_cart(request):
     if request.method == 'POST':
-        cart_items = CartItem.objects.filter(cart__user=request.user)
+        cart, created = Cart.objects.get_or_create(user=request.user)
+        cart_items = CartItem.objects.filter(cart=cart)
         has_error = False
         error_messages = {}
 
@@ -294,21 +304,30 @@ def update_cart(request):
             if quantity <= 0:
                 item.delete()
             else:
-                if quantity <= item.product.max_qty_per_person:
+                product = item.product
+                
+                # Check if quantity exceeds stock
+                if quantity > product.quantity:
+                    error_messages[item.id] = f"Not enough stock available for {product.title}."
+                    has_error = True
+                # Check if quantity exceeds maximum allowed per person
+                elif quantity > product.max_qty_per_person:
+                    error_messages[item.id] = f"Quantity exceeds limit for {product.title}."
+                    has_error = True
+                else:
                     item.quantity = quantity
                     item.save()
-                else:
-                    error_messages[item.id] = f"Quantity exceeds limit for {item.product.title}."
-                    has_error = True
         
         if has_error:
             request.session['error_messages'] = error_messages
+            messages.error(request, "Some items could not be updated due to limit exceeded.")
             return redirect('product_page:cart')  # Redirect back to cart to display error messages
 
         # Clear error messages after successful update
         if 'error_messages' in request.session:
             del request.session['error_messages']
         
+        messages.success(request, 'Cart updated successfully!')
         return redirect('product_page:cart')  # Redirect back to cart or appropriate page
 
     return HttpResponse("Invalid request method", status=405)
@@ -339,7 +358,8 @@ def place_order(request):
             total_amount=total,
             shipping_fee=shipping_fee,
             grand_total=grand_total,
-            order_number=str(uuid.uuid4())  # Generate a unique order number
+            order_number=str(uuid.uuid4()), # Generate a unique order number
+            status='Ordered'
         )
 
         # Create Order Items
@@ -368,12 +388,14 @@ def place_order(request):
 
 
 def order_success(request, order_number):
+    
     # Fetch the order using the order_number
     order = get_object_or_404(Order, order_number=order_number)
     
     context = {
         'order': order,
         'order_number': order_number,
+      
     }
 
     return render(request, 'user/order_success.html', context)

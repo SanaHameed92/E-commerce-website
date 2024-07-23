@@ -9,6 +9,20 @@
                 <div class="card shadow-2-strong" style="border-radius: 15px;">
                     <div class="card-body p-5">
                         <h3 class="mb-5">Verify OTP</h3>
+                        
+                        <!-- Display messages tagged as 'otp' -->
+                        {% if messages %}
+                            <div class="alert alert-info">
+                                {% for message in messages %}
+                                    {% if 'otp' in message.tags %}
+                                        <div class="alert alert-{{ message.tags }} mt-2">
+                                            {{ message }}
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
                         <form method="post" action="{% url 'verify_otp' user.id scenario %}">
                             {% csrf_token %}
                             {{ form.as_p }}

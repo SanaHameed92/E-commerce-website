@@ -10,11 +10,35 @@
     <link rel="stylesheet" href="{% static 'admin/css/bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'admin/css/templatemo-style.css' %}">
     <link rel="stylesheet" href="{% static 'admin/css/custom.css' %}"> <!-- Custom styles for this page -->
+    <style>
+        .status-ordered {
+            color: #007bff; /* Blue */
+            font-weight: bold;
+        }
+
+        .status-shipped {
+            color: #28a745; /* Green */
+            font-weight: bold;
+        }
+
+        .status-delivered {
+            color: #ff5722; /* Orange */
+            font-weight: bold;
+        }
+
+        .status-cancelled {
+            color: #dc3545; /* Red */
+            font-weight: bold;
+        }
+    </style>
     <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
     <script src="{% static 'js/bootstrap.min.js' %}"></script>
 </head>
 <body>
     <div class="container">
+        <div class="my-4">
+            <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary btn-lg">Back to Dashboard</a>
+        </div>
         <h1 class="my-4">Order List</h1>
         
         <table class="table table-striped">
@@ -39,7 +63,19 @@
                     <td>{{ order.address }}</td>
                     <td>${{ order.shipping_fee }}</td>
                     <td>${{ order.grand_total }}</td>
-                    <td>{{ order.status }}</td>
+                    <td>
+                        {% if order.status == 'ordered' %}
+                            <span class="status-ordered">{{ order.status|capfirst }}</span>
+                        {% elif order.status == 'shipped' %}
+                            <span class="status-shipped">{{ order.status|capfirst }}</span>
+                        {% elif order.status == 'delivered' %}
+                            <span class="status-delivered">{{ order.status|capfirst }}</span>
+                        {% elif order.status == 'cancelled' %}
+                            <span class="status-cancelled">{{ order.status|capfirst }}</span>
+                        {% else %}
+                            {{ order.status|capfirst }}
+                        {% endif %}
+                    </td>
                     <td>
                         <button class="btn btn-primary btn-sm update-status-btn" data-order-id="{{ order.id }}" data-current-status="{{ order.status }}">Update Status</button>
                     </td>
