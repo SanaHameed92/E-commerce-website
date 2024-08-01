@@ -124,7 +124,9 @@
                
                 <!-- Manage Address Section -->
                 <div class="address-section">
-                    <a href="{% url 'add_address' %}" class="btn btn-primary mb-3">Add New Address</a>
+                    <a href="{% url 'add_address' %}?redirect_to=manage_address" class="btn btn-primary mb-3">Add New Address</a>
+
+
                     <!-- Display Already Added Addresses -->
                     <div class="address-list">
                         {% if addresses %}
@@ -146,10 +148,7 @@
                             <p>No addresses added yet.</p>
                         {% endif %}
                     </div>
-                    <!-- Add Checkout Button -->
-                    <div class="mt-4 text-center">
-                        <a href="{% url 'product_page:checkout' %}" class="btn btn-success">Proceed to Checkout</a>
-                    </div>
+                  
                 </div>
             </div>
         </main>

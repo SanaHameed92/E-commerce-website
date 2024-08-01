@@ -20,7 +20,9 @@
         <div class="row mb-3">
             <div class="col-md-12 text-center">
                 <a href="{% url 'product_page:cart' %}" class="btn btn-secondary py-2">Back to Cart</a>
-                <a href="{% url 'add_address' %}" class="btn btn-primary py-2 ml-2">Add New Address</a>
+                <a href="{% url 'add_address' %}?redirect_to=product_page:checkout" class="btn btn-primary py-2 ml-2">Add New Address</a>
+
+
             </div>
         </div>
 
@@ -34,6 +36,7 @@
                         <select id="selected_address" name="selected_address" class="form-control">
                             {% for address in addresses %}
                                 <option value="{{ address.id }}" {% if address.id == selected_address.id %}selected{% endif %}>
+                                    <h4>{{ address.first_name }} {{ address.last_name }}</h4>
                                     {{ address.street_address }}, {{ address.city }}, {{ address.state }}, {{ address.country }}, {{ address.postal_code }}
                                 </option>
                             {% endfor %}

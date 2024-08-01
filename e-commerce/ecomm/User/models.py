@@ -1,4 +1,5 @@
 
+from django.utils import timezone
 from django.conf import settings
 from django.db import models
 from django.contrib.auth import get_user_model
@@ -17,6 +18,7 @@ class Address(models.Model):
     postal_code = models.CharField(max_length=20)
     is_default = models.BooleanField(default=False)
     email = models.EmailField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
 
     def get_full_address(self):
         return (f"{self.first_name} {self.last_name}, {self.street_address}, {self.city}, "

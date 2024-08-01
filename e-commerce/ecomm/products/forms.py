@@ -15,12 +15,7 @@ class ProductForm(forms.ModelForm):
         required=False
     )
 
-    brands = forms.ModelMultipleChoiceField(
-        queryset=Brand.objects.all(),
-        widget=forms.CheckboxSelectMultiple,
-        required=False
-    )
-
+   
     
     class Meta:
         model = Product
