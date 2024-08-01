@@ -1,8 +1,10 @@
+#User/views.py
 from uuid import uuid4
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
+from django.urls import NoReverseMatch, reverse
 from .models import Address
 from .forms import AddressForm
 from django.contrib.auth import update_session_auth_hash
@@ -31,7 +33,7 @@ def personal_information(request):
         user.save()
 
         # Optionally, show a success message
-        messages.success(request, 'Your personal information has been updated.')
+        messages.success(request, 'Your personal information has been updated.',extra_tags='profile')
 
         # Redirect back to the personal information page or any other desired page
         return redirect('personal_information')
@@ -50,23 +52,33 @@ def manage_address(request):
         return redirect('login')  # Redirect to login if not authenticated
 
     # Filter addresses for the logged-in user
-    addresses = Address.objects.filter(user=request.user)
+    addresses = Address.objects.filter(user=request.user).order_by('-created_at')
 
     return render(request, 'user/manage_address.html', {'addresses': addresses})
 
 def add_address(request):
+    redirect_url = request.GET.get('redirect_to', 'manage_address').strip()  # Default to 'manage_address'
+    
     if request.method == 'POST':
         form = AddressForm(request.POST)
         if form.is_valid():
             address = form.save(commit=False)
-            address.user = request.user  # Assign the current user
-            form.save()
+            address.user = request.user
+            if redirect_url == 'product_page:checkout':
+                address.is_default = True  # Set as default if coming from checkout
+                Address.objects.filter(user=request.user).update(is_default=False)  # Make all others non-default
+            address.save()
             messages.success(request, 'Address added successfully!')
-            return redirect('manage_address')
+            try:
+                return redirect(reverse(redirect_url) if ':' in redirect_url else redirect_url)
+            except NoReverseMatch:
+                return redirect('manage_address')
     else:
         form = AddressForm()
     
     return render(request, 'user/add_address.html', {'form': form})
+
+
 
 @login_required
 def edit_address(request, address_id):
@@ -99,12 +111,12 @@ def reset_password(request):
             if new_password1 == new_password2:
                 user = form.save()
                 update_session_auth_hash(request, user)  # Important to update the session
-                messages.success(request, 'Your password was successfully updated!')
+                messages.success(request, 'Your password was successfully updated!',extra_tags='profile')
                 return redirect('personal_information')  # Redirect to profile page
             else:
-                messages.error(request, "Passwords do not match. Please enter matching passwords.")
+                messages.error(request, "Passwords do not match. Please enter matching passwords.",extra_tags='profile')
         else:
-            messages.error(request, 'Please enter correct password.')
+            messages.error(request, 'Please enter correct password.',extra_tags='profile')
     else:
         form = PasswordChangeForm(request.user)
 
@@ -141,10 +153,10 @@ def cancel_order(request, order_number):
         order.save()
 
         # Display a success message
-        messages.success(request, "Order cancelled successfully!")
+        messages.success(request, "Order cancelled successfully!",extra_tags='order')
     else:
         # If the order is already cancelled, display an info message
-        messages.info(request, "Order is already cancelled.")
+        messages.info(request, "Order is already cancelled.",extra_tags='order')
     
     # Redirect to the order detail or any other page you prefer
     return redirect('order_detail', order_number=order_number)

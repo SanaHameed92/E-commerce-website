@@ -5,10 +5,10 @@ from .models import Cart, CartItem, Order, OrderItem, Product, Category, Brand, 
 from django.core.paginator import Paginator
 from django.shortcuts import render,redirect
 from django.urls import reverse
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
 from User.models import Address
-from User.forms import AddressForm
+from django.db.models import Count
 
 
 def shop(request):
@@ -41,8 +41,11 @@ def shop(request):
         except Size.DoesNotExist:
             pass
 
+    # Annotate products with purchase counts
+    product_list = product_list.annotate(cart_count=Count('cartitem'))
+
     if sort == 'popularity':
-        product_list = product_list.order_by('-popularity')  # Assuming you have a popularity field
+        product_list = product_list.order_by('-cart_count')  # Sort by dynamic popularity
     elif sort == 'price_low_high':
         product_list = product_list.order_by('original_price')
     elif sort == 'price_high_low':
@@ -96,10 +99,14 @@ def shop_single(request, product_id):
     if product_error:
         messages.error(request, product_error)
 
+
+    messages_for_shop = [msg for msg in messages.get_messages(request) if 'profile' not in msg.tags]
+
     context = {
         'product': product,
         'featured_items': features_products,
         'availability_message': "Only 1 item left" if product.quantity == 1 else "",
+        'messages': messages_for_shop 
     }
     return render(request, 'shop-single.html', context)
 
@@ -207,7 +214,8 @@ def checkout(request):
     formatted_delivery_date = estimated_delivery_date.strftime('%d %b %Y')  # Format as "25 Jul 2024"
 
     # Get user's addresses
-    addresses = Address.objects.filter(user=request.user)
+    addresses = Address.objects.filter(user=request.user).order_by('-is_default', '-created_at')
+    default_address = addresses.filter(is_default=True).first()
 
     if request.method == 'POST':
         address_id = request.POST.get('selected_address')
@@ -259,6 +267,7 @@ def checkout(request):
         'addresses': addresses,
         'grand_total': grand_total,
         'shipping_fee': shipping_fee,
+        'default_address': default_address,
         'formatted_delivery_date': formatted_delivery_date,  # Pass to template context
     }
 
@@ -289,48 +298,33 @@ def order_summary(request):
 
 def update_cart(request):
     if request.method == 'POST':
-        cart, created = Cart.objects.get_or_create(user=request.user)
-        cart_items = CartItem.objects.filter(cart=cart)
-        has_error = False
-        error_messages = {}
+        item_id = request.POST.get('item_id')
+        quantity = int(request.POST.get('quantity', 0))
 
-        for item in cart_items:
-            quantity = request.POST.get(f'quantity_{item.id}', 0)
-            try:
-                quantity = int(quantity)
-            except ValueError:
-                quantity = 0
-            
-            if quantity <= 0:
-                item.delete()
+        try:
+            cart = Cart.objects.get(user=request.user)
+            item = CartItem.objects.get(cart=cart, id=item_id)
+            product = item.product
+
+            # Check if quantity exceeds stock
+            if quantity > product.quantity:
+                return JsonResponse({'success': False, 'error_message': f"Not enough stock available for {product.title}."})
+            # Check if quantity exceeds maximum allowed per person
+            elif quantity > product.max_qty_per_person:
+                return JsonResponse({'success': False, 'error_message': f"Quantity exceeds limit for {product.title}."})
             else:
-                product = item.product
-                
-                # Check if quantity exceeds stock
-                if quantity > product.quantity:
-                    error_messages[item.id] = f"Not enough stock available for {product.title}."
-                    has_error = True
-                # Check if quantity exceeds maximum allowed per person
-                elif quantity > product.max_qty_per_person:
-                    error_messages[item.id] = f"Quantity exceeds limit for {product.title}."
-                    has_error = True
-                else:
-                    item.quantity = quantity
-                    item.save()
-        
-        if has_error:
-            request.session['error_messages'] = error_messages
-            messages.error(request, "Some items could not be updated due to limit exceeded.")
-            return redirect('product_page:cart')  # Redirect back to cart to display error messages
+                item.quantity = quantity
+                item.save()
+                return JsonResponse({'success': True})
 
-        # Clear error messages after successful update
-        if 'error_messages' in request.session:
-            del request.session['error_messages']
-        
-        messages.success(request, 'Cart updated successfully!')
-        return redirect('product_page:cart')  # Redirect back to cart or appropriate page
+        except Cart.DoesNotExist:
+            return JsonResponse({'success': False, 'error_message': 'Cart not found.'})
+        except CartItem.DoesNotExist:
+            return JsonResponse({'success': False, 'error_message': 'Cart item not found.'})
+        except ValueError:
+            return JsonResponse({'success': False, 'error_message': 'Invalid quantity.'})
 
-    return HttpResponse("Invalid request method", status=405)
+    return JsonResponse({'success': False, 'error_message': 'Invalid request method'}, status=405)
 
 
 def place_order(request):
@@ -362,7 +356,7 @@ def place_order(request):
             status='Ordered'
         )
 
-        # Create Order Items
+        # Create Order Items and update product popularity
         for item_data in cart_items_data:
             product = Product.objects.get(title=item_data['title'])
             OrderItem.objects.create(
@@ -371,8 +365,9 @@ def place_order(request):
                 quantity=item_data['quantity'],
                 total_price=item_data['total_price']
             )
-
+            # Update product quantity and popularity
             product.quantity -= item_data['quantity']
+            product.popularity += item_data['quantity']
             product.save()
 
         # Clear the cart after placing the order

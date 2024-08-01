@@ -8,6 +8,7 @@ from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from User.models import Address
 
+
 class Category(models.Model):
     category_name = models.CharField(max_length=50, unique=True)
     description = models.TextField(max_length=255, blank=True)
@@ -119,6 +120,7 @@ class Order(models.Model):
     grand_total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')  # Added status field
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
         if not self.order_number:

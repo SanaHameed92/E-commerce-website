@@ -110,6 +110,11 @@
                 Status: {{ order.status }}
             </p>
             <p>Total: ${{ order.grand_total|floatformat:2 }}</p>
+
+            <h4>Shipping Address:</h4>
+            <p>Name: {{ order.address.first_name }} {{ order.address.last_name }}</p>
+            <p>Address: {{ order.address.street_address }}, {{ order.address.city }}, {{ order.address.state }}, {{ order.address.country }} - {{ order.address.postal_code }}</p>
+            <p>Phone: {{ order.address.phone_number }}</p>
             <!-- Add more order details as needed -->
             <h4>Items:</h4>
             <table class="order-items-table">
