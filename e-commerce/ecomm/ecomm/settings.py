@@ -186,3 +186,6 @@ AUTHENTICATION_BACKENDS = (
 
 LOGIN_REDIRECT_URL ='product_page:shop'
 LOGOUT_REDIRECT_URL ='/'
+
+
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
