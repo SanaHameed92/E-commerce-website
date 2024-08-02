@@ -5,12 +5,14 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from django.urls import NoReverseMatch, reverse
-from .models import Address
+from .models import Address, Wishlist
 from .forms import AddressForm
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
-from products.models import Order
+from products.models import Order, Product
 from django.views.decorators.http import require_POST
+from django.db.models import Count
+from django.core.exceptions import MultipleObjectsReturned
 
 User = get_user_model()
 
@@ -174,3 +176,46 @@ def update_order_status(request):
     order.status = new_status
     order.save()
     return redirect('order_list')
+
+
+def add_to_wishlist(request, product_id):
+    if not request.user.is_authenticated:
+        messages.error(request, 'You need to be logged in to add items to your wishlist.', extra_tags='wishlist')
+        return redirect('login')  # Redirect to login page
+
+    product = get_object_or_404(Product, id=product_id)
+    wishlist_item, created = Wishlist.objects.get_or_create(user=request.user, product=product)
+
+    if created:
+        messages.success(request, 'Product added to your wishlist.', extra_tags='wishlist')
+    else:
+        messages.info(request, 'Product is already in your wishlist.', extra_tags='wishlist')
+
+    return redirect('wishlist')
+
+def wishlist(request):
+    try:
+        wishlist_items = Wishlist.objects.filter(user=request.user)
+    except MultipleObjectsReturned:
+        wishlist_items = Wishlist.objects.filter(user=request.user).first()  # Get the first item
+        Wishlist.objects.filter(user=request.user).exclude(id=wishlist_items.id).delete()  # Remove other duplicates
+
+    # Filter messages that should only be displayed on the wishlist page
+    messages_for_wishlist = [msg for msg in messages.get_messages(request) if 'wishlist' in msg.tags]
+
+    context = {
+        'wishlist_items': wishlist_items,
+        'messages_for_wishlist': messages_for_wishlist
+    }
+    return render(request, 'user/wishlist.html', context)
+
+def remove_from_wishlist(request, item_id):
+    if request.method == 'POST':
+        # Get the wishlist item for the current user
+        wishlist_item = get_object_or_404(Wishlist, id=item_id, user=request.user)
+        # Remove the item from the wishlist
+        wishlist_item.delete()
+        messages.success(request, "Item removed from wishlist.", extra_tags='wishlist')
+    else:
+        messages.error(request, "Invalid request method.", extra_tags='wishlist')
+    return redirect('wishlist')

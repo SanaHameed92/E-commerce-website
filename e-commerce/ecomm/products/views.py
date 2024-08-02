@@ -100,7 +100,7 @@ def shop_single(request, product_id):
         messages.error(request, product_error)
 
 
-    messages_for_shop = [msg for msg in messages.get_messages(request) if 'profile' not in msg.tags]
+    messages_for_shop = [msg for msg in messages.get_messages(request) if 'shop-single' in msg.tags]
 
     context = {
         'product': product,
@@ -205,7 +205,7 @@ def checkout(request):
     
     # Calculate totals and fees
     total = sum(item.total_price for item in cart_items)
-    shipping_fee = 50 if total >= 350 else 0    
+    shipping_fee = 50 if total <= 350 else 0    
     grand_total = total + shipping_fee
 
     # Calculate the estimated delivery date (e.g., 5 days from now)
@@ -343,7 +343,7 @@ def place_order(request):
     try:
 
         selected_address = Address.objects.get(id=address_id)
-        # Create an Order
+        # Create an Order   
         order = Order.objects.create(
             user=request.user,
             address=selected_address,  # Store address as a string

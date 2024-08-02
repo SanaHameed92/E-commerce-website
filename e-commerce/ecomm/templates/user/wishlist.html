@@ -1,0 +1,103 @@
+{% extends "user_base.html" %}
+{% load static %}
+
+{% block user_content %}
+<style>
+    .wishlist-container {
+        margin-top: 50px;
+    }
+
+    .wishlist-container h2 {
+        margin-bottom: 30px;
+        color: #343a40;
+    }
+
+    .wishlist-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 20px;
+    }
+
+    .wishlist-item img {
+        width: 200px; /* Adjust as needed */
+        height: 100px; /* Adjust as needed */
+        object-fit: cover;
+        border-radius: 4px;
+        margin: auto; /* Centering image horizontally */
+    }
+
+    .wishlist-item-details {
+        margin-left: 20px;
+        flex: 1; /* Ensure details take available space */
+    }
+
+    .wishlist-item h3 {
+        margin: 0;
+        font-size: 1.2rem;
+        color: #007bff;
+    }
+
+    .wishlist-item .price {
+        color: #ff5722;
+        font-weight: bold;
+    }
+
+    .btn-view, .btn-remove {
+        margin-top: 10px;
+        padding: 8px 16px;
+        border-radius: 5px;
+        text-decoration: none;
+        text-align: center;
+        display: inline-block;
+    }
+
+    .btn-view {
+        background-color: #007bff;
+        color: #fff;
+    }
+
+    .btn-view:hover {
+        background-color: #0056b3;
+    }
+
+    .btn-remove {
+        background-color: #dc3545;
+        color: #fff;
+    }
+
+    .btn-remove:hover {
+        background-color: #c82333;
+    }
+</style>
+
+<div class="wishlist-container">
+    {% if messages_for_wishlist %}
+    <div class="alert-container">
+        {% for message in messages_for_wishlist %}
+            <div class="alert alert-{{ message.tags.split.0 }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <h2>My Wishlist</h2>
+    {% if wishlist_items %}
+    {% for item in wishlist_items %}
+    <div class="wishlist-item">
+        <img src="{{ item.product.product_image.url }}" alt="{{ item.product.title }}">
+        <div class="wishlist-item-details">
+            <h3>{{ item.product.title }}</h3>
+            <p class="price">${{ item.product.original_price|floatformat:2 }}</p>
+            <a href="{% url 'product_page:shop-single' item.product.id %}" class="btn-view">View Product</a>
+            <form action="{% url 'remove_from_wishlist' item.id %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn-remove">Remove</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p>Your wishlist is empty.</p>
+    {% endif %}
+</div>
+{% endblock %}

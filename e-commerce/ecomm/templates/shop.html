@@ -92,6 +92,10 @@
                                     {% else %}
                                     <p class="text-danger font-weight-bold">Out of Stock</p>
                                     {% endif %}
+                                    <!-- Wishlist Button -->
+                                    <a href="{% url 'add_to_wishlist' product.id %}" class="btn btn-outline-danger btn-sm" title="Add to Wishlist">
+                                        <i class="fa fa-heart"></i>
+                                    </a>
                                 </div>
                             </div>
                         </div>
