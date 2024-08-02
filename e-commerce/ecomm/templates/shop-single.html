@@ -141,14 +141,13 @@
                 <p><strong class="text-primary h4">{{ product.original_price }}</strong></p>
 
                 <!-- Display Flash Messages -->
-                {% if messages %}
+                {% if messages_for_shop %}
                     <div class="alert-container">
-                        {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                        {% for message in messages_for_shop %}
+                            <div class="alert alert-{{ message.tags.split.0 }}">{{ message }}</div>
                         {% endfor %}
                     </div>
                 {% endif %}
-                    
                 <!-- Size Selection -->
                 <div class="mb-4">
                     <h4>Select Size</h4>
