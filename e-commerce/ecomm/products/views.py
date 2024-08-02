@@ -61,6 +61,11 @@ def shop(request):
     elif sort == 'z_a':
         product_list = product_list.order_by('-title')
 
+
+    for product in product_list:
+        product.availability_status = 'in_stock' if product.quantity > 0 else 'sold_out'
+        product.save()
+        
     product_paginator = Paginator(product_list, 6)
     page_number = request.GET.get('page')
     product_list = product_paginator.get_page(page_number)
@@ -336,6 +341,7 @@ def place_order(request):
     #selected_address = request.session.get('selected_address')
     address_id = request.session.get('selected_address', {}).get('id')
     payment_method = request.session.get('selected_address', {}).get('payment_method')
+    payment_id = request.POST.get('payment_id')
 
     if not cart_items_data or not address_id:
         messages.error(request, "Incomplete order details.")
@@ -353,7 +359,8 @@ def place_order(request):
             shipping_fee=shipping_fee,
             grand_total=grand_total,
             order_number=str(uuid.uuid4()), # Generate a unique order number
-            status='Ordered'
+            status='Ordered',
+            payment_id = payment_id
         )
 
         # Create Order Items and update product popularity
@@ -372,7 +379,8 @@ def place_order(request):
 
         # Clear the cart after placing the order
         CartItem.objects.filter(cart__user=request.user).delete()
-        
+        if payment_method == 'Paid by RazorPay':
+            return JsonResponse({'status:"Your order has been placed successfully"'})
         # Redirect to order success page with the order number
         return redirect('product_page:order_success', order_number=order.order_number)
 
@@ -394,3 +402,20 @@ def order_success(request, order_number):
     }
 
     return render(request, 'user/order_success.html', context)
+
+
+def razorpaycheck(request):
+    cart = Cart.objects.filter(user=request.user).first()
+    if not cart:
+        return JsonResponse({'error': 'Cart not found'}, status=404)
+
+    total_price = sum(item.total_price for item in CartItem.objects.filter(cart=cart))
+    shipping_fee = 50 if total_price <= 350 else 0 # Example shipping fee, replace with your actual logic
+    grand_total = total_price + shipping_fee
+
+    return JsonResponse({
+        'total_price': grand_total,
+        'first_name': request.user.first_name,
+        'email': request.user.email,
+        'phone_number': request.user.phone_number,
+    })

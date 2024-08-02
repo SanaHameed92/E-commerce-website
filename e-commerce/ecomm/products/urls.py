@@ -20,6 +20,7 @@ urlpatterns = [
     path('order_summary/',views.order_summary,name='order_summary'),
     path('place-order/', views.place_order, name='place_order'),
     path('order-success/<uuid:order_number>/', views.order_success, name='order_success'),
+    path('proceed-to-pay/',views.razorpaycheck,name='razorpaycheck')
    
     
     

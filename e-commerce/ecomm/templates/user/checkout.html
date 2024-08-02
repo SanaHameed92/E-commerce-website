@@ -46,8 +46,7 @@
                     <div class="form-group">
                         <label for="payment_method">Select Payment Method</label>
                         <select id="payment_method" name="payment_method" class="form-control">
-                            <option value="credit_card">Credit Card</option>
-                            <option value="paypal">PayPal</option>
+                            <option value="RazorPay">RazorPay</option>
                             <option value="COD">Cash on Delivery</option>
                         </select>
                     </div>
@@ -114,10 +113,24 @@
 
             <div class="row">
                 <div class="col-md-12 text-center">
-                    <button type="submit" class="btn btn-primary btn py-3">Place Order</button>
+                    <button type="submit" class="btn btn-primary btn py-3">Place Order with COD</button>
+                    <button type="button" class="btn btn-primary payWithRazorpay btn py-3">Place Order with RazorPay</button>
                 </div>
             </div>
         </form>
     </div>
 </div>
+
+<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="{% static 'js/checkout.js' %}"></script>
+
+
+
 {% endblock %}
+
+
+
+
+
