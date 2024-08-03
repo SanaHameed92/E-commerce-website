@@ -211,30 +211,42 @@ def checkout(request):
     
     # Calculate totals and fees
     total = sum(item.total_price for item in cart_items)
-    shipping_fee = 50 if total <= 350 else 0    
+    shipping_fee = 50 if total <= 350 else 0
     grand_total = total + shipping_fee
 
-    # Calculate the estimated delivery date (e.g., 5 days from now)
-    delivery_days = 5
-    estimated_delivery_date = datetime.now() + timedelta(days=delivery_days)
-    formatted_delivery_date = estimated_delivery_date.strftime('%d %b %Y')  # Format as "25 Jul 2024"
-
-    # Get user's addresses
-    addresses = Address.objects.filter(user=request.user).order_by('-is_default', '-created_at')
-    default_address = addresses.filter(is_default=True).first()
+    # Initialize coupon discount
+    coupon_discount = 0
+    coupon_code = None
+    error_message = None
 
     if request.method == 'POST':
         address_id = request.POST.get('selected_address')
         payment_method = request.POST.get('payment_method')
         order_notes = request.POST.get('order_notes')
+        coupon_code = request.POST.get('coupon_code', '').strip()
 
         if address_id:
             try:
-                # Fetch the selected address
                 selected_address = Address.objects.get(id=address_id)
             except Address.DoesNotExist:
                 messages.error(request, "Selected address does not exist.")
                 return redirect('checkout')
+
+            # Validate coupon
+            if coupon_code:
+                try:
+                    coupon = Coupon.objects.get(code=coupon_code)
+                    coupon.update_status()
+                    if coupon.status == 'active':
+                        coupon_discount = coupon.discount
+                    else:
+                        error_message = "Coupon is not active."
+                except Coupon.DoesNotExist:
+                    error_message = "Invalid coupon code."
+
+            # Apply coupon discount to total
+            discount_amount = (total * coupon_discount / 100) if coupon_discount > 0 else 0
+            grand_total = total - discount_amount + shipping_fee
 
             # Format address
             formatted_address = (f"{selected_address.first_name} {selected_address.last_name}, "
@@ -253,19 +265,39 @@ def checkout(request):
             request.session['cart_items'] = cart_items_data
             request.session['total'] = float(total)
             request.session['shipping_fee'] = float(shipping_fee)
+            request.session['coupon_discount'] = float(discount_amount)
             request.session['grand_total'] = float(grand_total)
             request.session['selected_address'] = {
                 'address': formatted_address,
                 'id': selected_address.id,
                 'payment_method': payment_method,
             }
-            request.session['estimated_delivery_date'] = formatted_delivery_date  # Add estimated delivery date
+            request.session['coupon_code'] = coupon_code  # Save coupon code to session
+            request.session['estimated_delivery_date'] = (datetime.now() + timedelta(days=5)).strftime('%d %b %Y')  # Add estimated delivery date
             request.session.modified = True
 
-            return redirect('product_page:order_summary')
+            if not error_message:
+                return redirect('product_page:order_summary')
+            else:
+                return render(request, 'user/checkout.html', {
+                    'cart_items': cart_items,
+                    'total': total,
+                    'addresses': Address.objects.filter(user=request.user).order_by('-is_default', '-created_at'),
+                    'grand_total': grand_total,
+                    'shipping_fee': shipping_fee,
+                    'formatted_delivery_date': (datetime.now() + timedelta(days=5)).strftime('%d %b %Y'),
+                    'coupon_discount': coupon_discount,
+                    'error_message': error_message,
+                    'coupon_code': coupon_code
+                })
+
         else:
             messages.error(request, "Please select a shipping address.")
             return redirect('checkout')
+
+    # Get user's addresses
+    addresses = Address.objects.filter(user=request.user).order_by('-is_default', '-created_at')
+    default_address = addresses.filter(is_default=True).first()
 
     context = {
         'cart_items': cart_items,
@@ -274,7 +306,8 @@ def checkout(request):
         'grand_total': grand_total,
         'shipping_fee': shipping_fee,
         'default_address': default_address,
-        'formatted_delivery_date': formatted_delivery_date,  # Pass to template context
+        'formatted_delivery_date': (datetime.now() + timedelta(days=5)).strftime('%d %b %Y'),
+        'coupon_code': coupon_code,  # Include coupon_code in context
     }
 
     return render(request, 'user/checkout.html', context)
@@ -285,6 +318,8 @@ def order_summary(request):
     shipping_fee = request.session.get('shipping_fee', 0)
     grand_total = request.session.get('grand_total', 0)
     selected_address = request.session.get('selected_address', {})
+    coupon_code = request.session.get('coupon_code', '')
+    coupon_discount = request.session.get('coupon_discount', 0)
 
     # Extract address details
     formatted_address = selected_address.get('address', 'No address selected')
@@ -297,6 +332,8 @@ def order_summary(request):
         'grand_total': grand_total,
         'formatted_address': formatted_address,
         'payment_method': payment_method,
+        'coupon_code': coupon_code,  # Include coupon_code in context
+        'coupon_discount': coupon_discount,  # Include coupon_discount in context
     }
 
     return render(request, 'user/order_summary.html', context)
@@ -339,7 +376,6 @@ def place_order(request):
     total = request.session.get('total')
     shipping_fee = request.session.get('shipping_fee')
     grand_total = request.session.get('grand_total')
-    #selected_address = request.session.get('selected_address')
     address_id = request.session.get('selected_address', {}).get('id')
     payment_method = request.session.get('selected_address', {}).get('payment_method')
     payment_id = request.POST.get('payment_id')
@@ -347,21 +383,23 @@ def place_order(request):
     if not cart_items_data or not address_id:
         messages.error(request, "Incomplete order details.")
         return redirect('product_page:checkout')
-    try:
 
+    try:
+        # Retrieve the selected address
         selected_address = Address.objects.get(id=address_id)
-        # Create an Order   
+
+        # Create an Order
         order = Order.objects.create(
             user=request.user,
-            address=selected_address,  # Store address as a string
+            address=selected_address,
             payment_method=payment_method,
             order_notes=request.POST.get('order_notes', ''),
             total_amount=total,
             shipping_fee=shipping_fee,
             grand_total=grand_total,
-            order_number=str(uuid.uuid4()), # Generate a unique order number
+            order_number=str(uuid.uuid4()),  # Generate a unique order number
             status='Ordered',
-            payment_id = payment_id
+            payment_id=payment_id
         )
 
         # Create Order Items and update product popularity
@@ -379,16 +417,19 @@ def place_order(request):
             product.save()
 
         # Clear the cart after placing the order
+        # Assuming you have a CartItem model associated with the user
         CartItem.objects.filter(cart__user=request.user).delete()
+
+        # Handle RazorPay payment
         if payment_method == 'Paid by RazorPay':
-            return JsonResponse({'status:"Your order has been placed successfully"'})
+            return JsonResponse({'status': "Your order has been placed successfully"})
+
         # Redirect to order success page with the order number
         return redirect('product_page:order_success', order_number=order.order_number)
 
     except Exception as e:
         messages.error(request, f"An error occurred while placing the order: {e}")
         return redirect('product_page:checkout')
-
 
 
 def order_success(request, order_number):

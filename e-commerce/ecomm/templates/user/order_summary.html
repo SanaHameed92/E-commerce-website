@@ -40,7 +40,6 @@
                         <tbody>
                             {% for item in cart_items %}
                             <tr>
-                                
                                 <td>{{ item.title }}</td>
                                 <td class="text-center">{{ item.quantity }}</td>
                                 <td class="text-center">${{ item.total_price }}</td>
@@ -63,10 +62,17 @@
                         <li class="d-flex justify-content-between">
                             <strong>Shipping Fee:</strong> <span>${{ shipping_fee }}</span>
                         </li>
+                        {% if coupon_code %}
+                        <li class="d-flex justify-content-between">
+                            <strong>Discount Code:</strong> <span>{{ coupon_code }}</span>
+                        </li>
+                        <li class="d-flex justify-content-between">
+                            <strong>Discount Applied:</strong> <span>${{ coupon_discount }}</span>
+                        </li>
+                        {% endif %}
                         <li class="d-flex justify-content-between">
                             <strong>Grand Total:</strong> <span>${{ grand_total }}</span>
                         </li>
-                        
                     </ul>
                 </div>
             </div>

@@ -21,12 +21,10 @@
             <div class="col-md-12 text-center">
                 <a href="{% url 'product_page:cart' %}" class="btn btn-secondary py-2">Back to Cart</a>
                 <a href="{% url 'add_address' %}?redirect_to=product_page:checkout" class="btn btn-primary py-2 ml-2">Add New Address</a>
-
-
             </div>
         </div>
 
-        <form method="post" action="#">
+        <form method="post" action="{% url 'product_page:checkout' %}">
             {% csrf_token %}
             <div class="row mb-5">
                 <div class="col-md-12">
@@ -36,8 +34,7 @@
                         <select id="selected_address" name="selected_address" class="form-control">
                             {% for address in addresses %}
                                 <option value="{{ address.id }}" {% if address.id == selected_address.id %}selected{% endif %}>
-                                    <h4>{{ address.first_name }} {{ address.last_name }}</h4>
-                                    {{ address.street_address }}, {{ address.city }}, {{ address.state }}, {{ address.country }}, {{ address.postal_code }}
+                                    {{ address.first_name }} {{ address.last_name }} - {{ address.street_address }}, {{ address.city }}, {{ address.state }}, {{ address.country }}, {{ address.postal_code }}
                                 </option>
                             {% endfor %}
                         </select>
@@ -51,6 +48,9 @@
                         </select>
                     </div>
                 </div>
+
+                
+
                 <div class="col-md-12">
                     <h2 class="text-black h4">Order Summary</h2>
                     <table class="table table-bordered">
@@ -75,7 +75,28 @@
                             {% endfor %}
                         </tbody>
                     </table>
-
+                    <!-- Add Coupon Section -->
+                <div class="col-md-12 mb-5">
+                    <h2 class="text-black h4">Coupon Code</h2>
+                    <div class="form-group">
+                        <label for="coupon_code">Enter Coupon Code</label>
+                        <div class="input-group">
+                            <input type="text" id="coupon_code" name="coupon_code" class="form-control" placeholder="Enter your coupon code">
+                            <div class="input-group-append">
+                                <button type="submit" class="btn btn-primary">Apply Coupon</button>
+                            </div>
+                        </div>
+                        {% if coupon_discount > 0 %}
+                        <div class="mt-2 alert alert-success">
+                            Coupon applied! You saved ${{ coupon_discount }}.
+                        </div>
+                        {% elif coupon_code %}
+                        <div class="mt-2 alert alert-danger">
+                            {{ error_message }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <span class="text-black">Subtotal</span>
@@ -126,11 +147,4 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="{% static 'js/checkout.js' %}"></script>
 
-
-
 {% endblock %}
-
-
-
-
-
