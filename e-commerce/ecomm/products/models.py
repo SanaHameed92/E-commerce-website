@@ -145,6 +145,11 @@ class OrderItem(models.Model):
 class Cart(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
+    coupon = models.ForeignKey('Coupon', null=True, blank=True, on_delete=models.SET_NULL)
+
+    
+    
+
 
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE)
@@ -152,9 +157,6 @@ class CartItem(models.Model):
     quantity = models.PositiveIntegerField(default=1)
     added_at = models.DateTimeField(auto_now_add=True)
     
-    
-
-
 
     @property
     def total_price(self):
@@ -162,5 +164,30 @@ class CartItem(models.Model):
     
 
 
+class Coupon(models.Model):
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+        ('expired', 'Expired'),
+    ]
 
+    code = models.CharField(max_length=20)
+    name = models.CharField(max_length=100)
+    discount = models.DecimalField(max_digits=5, decimal_places=2)
+    valid_from = models.DateField()
+    valid_to = models.DateField()
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='inactive')
+
+    def __str__(self):
+        return self.code
+
+    def update_status(self):
+        today = timezone.now().date()
+        if self.valid_from <= today <= self.valid_to:
+            self.status = 'active'
+        elif today < self.valid_from:
+            self.status = 'inactive'
+        else:
+            self.status = 'expired'
+        self.save(update_fields=['status'])
 

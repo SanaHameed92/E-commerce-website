@@ -1,7 +1,7 @@
 # products/forms.py
 
 from django import forms
-from .models import Product, ProductImage, Category, Brand, Size, Color
+from .models import Coupon, Product, ProductImage, Category, Brand, Size, Color
 
 class ProductForm(forms.ModelForm):
     sizes = forms.ModelMultipleChoiceField(
@@ -49,6 +49,7 @@ class ColorForm(forms.ModelForm):
 
 
 
+
 class ProductImageForm(forms.ModelForm):
     class Meta:
         model = ProductImage
@@ -68,3 +69,12 @@ class CartUpdateForm(forms.Form):
                 label=item.product.title
             )
 
+class CouponForm(forms.ModelForm):
+    class Meta:
+        model = Coupon
+        fields = ['code', 'name', 'discount', 'valid_from', 'valid_to']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['valid_from'].widget = forms.SelectDateWidget(years=range(2000, 2031))
+        self.fields['valid_to'].widget = forms.SelectDateWidget(years=range(2000, 2031))

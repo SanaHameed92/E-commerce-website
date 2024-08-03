@@ -1,0 +1,80 @@
+{% extends 'admin_base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">Coupons</h2>
+    <a href="{% url 'product_page:coupon_add' %}" class="btn btn-primary mb-3">Add Coupon</a>
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Code</th>
+                <th>Discount</th> <!-- Added Discount Column -->
+                <th>Valid From</th>
+                <th>Valid To</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for coupon in coupons %}
+            <tr>
+                <td>{{ coupon.name }}</td>
+                <td>{{ coupon.code }}</td>
+                <td>{{ coupon.discount }}%</td> <!-- Added Discount Data -->
+                <td>{{ coupon.valid_from }}</td>
+                <td>{{ coupon.valid_to }}</td>
+                <td>{{ coupon.get_status_display }}</td>
+                <td class="actions">
+                    <a href="{% url 'product_page:coupon_edit' coupon.pk %}" class="btn btn-warning btn-sm">Edit</a>
+                    <a href="{% url 'product_page:coupon_delete' coupon.pk %}" class="btn btn-danger btn-sm">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .container {
+        padding: 20px;
+    }
+
+    h2 {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+
+    table {
+        width: 100%;
+        margin-bottom: 20px;
+        border-collapse: collapse;
+    }
+
+    th, td {
+        padding: 12px;
+        text-align: left;
+        vertical-align: middle;
+    }
+
+    th {
+        background-color: #f8f9fa;
+        font-weight: bold;
+    }
+
+    tbody tr:nth-child(odd) {
+        background-color: #f2f2f2;
+    }
+
+    .btn-sm {
+        padding: 5px 10px;
+    }
+
+    .actions {
+        text-align: center;
+    }
+</style>
+{% endblock %}
