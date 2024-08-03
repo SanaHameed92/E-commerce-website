@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import uuid
 from django.shortcuts import render, get_object_or_404
-from .models import Cart, CartItem, Order, OrderItem, Product, Category, Brand, Size, Color
+from .models import Cart, CartItem, Coupon, Order, OrderItem, Product, Category, Brand, Size, Color
 from django.core.paginator import Paginator
 from django.shortcuts import render,redirect
 from django.urls import reverse
@@ -9,6 +9,7 @@ from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
 from User.models import Address
 from django.db.models import Count
+from .forms import CouponForm
 
 
 def shop(request):
@@ -419,3 +420,44 @@ def razorpaycheck(request):
         'email': request.user.email,
         'phone_number': request.user.phone_number,
     })
+
+
+def coupon_list(request):
+    coupons = Coupon.objects.all()
+    return render(request, 'admin_side/coupon_list.html', {'coupons': coupons})
+
+def coupon_add(request):
+    if request.method == 'POST':
+        form = CouponForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('product_page:coupon_list')
+    else:
+        form = CouponForm()
+    return render(request, 'admin_side/coupon_form.html', {'form': form})
+
+def coupon_edit(request, pk):
+    coupon = get_object_or_404(Coupon, pk=pk)
+    if request.method == 'POST':
+        form = CouponForm(request.POST, instance=coupon)
+        if form.is_valid():
+            form.save()
+            return redirect('product_page:coupon_list')
+    else:
+        form = CouponForm(instance=coupon)
+    return render(request, 'admin_side/coupon_form.html', {'form': form})
+
+def coupon_delete(request, pk):
+    coupon = get_object_or_404(Coupon, pk=pk)
+
+    # Directly update the status field
+    if coupon.status == 'active':
+        coupon.status = 'inactive'
+    else:
+        coupon.status = 'active'
+    
+    coupon.save(update_fields=['status'])  # Use update_fields to only save the status field
+
+    return redirect('product_page:coupon_list')
+
+

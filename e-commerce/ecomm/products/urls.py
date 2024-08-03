@@ -20,10 +20,11 @@ urlpatterns = [
     path('order_summary/',views.order_summary,name='order_summary'),
     path('place-order/', views.place_order, name='place_order'),
     path('order-success/<uuid:order_number>/', views.order_success, name='order_success'),
-    path('proceed-to-pay/',views.razorpaycheck,name='razorpaycheck')
-   
-    
-    
+    path('proceed-to-pay/',views.razorpaycheck,name='razorpaycheck'),
+    path('coupons/', views.coupon_list, name='coupon_list'),
+    path('coupons/add/', views.coupon_add, name='coupon_add'),
+    path('coupons/edit/<int:pk>/', views.coupon_edit, name='coupon_edit'),
+    path('coupons/delete/<int:pk>/', views.coupon_delete, name='coupon_delete'),
     
     
     
