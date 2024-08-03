@@ -10,6 +10,7 @@ from django.contrib import messages
 from User.models import Address
 from django.db.models import Count
 from .forms import CouponForm
+from django.db.models import Q
 
 
 def shop(request):
@@ -116,6 +117,19 @@ def shop_single(request, product_id):
     }
     return render(request, 'shop-single.html', context)
 
+def search_products(request):
+    query = request.GET.get('q', '')
+    products = Product.objects.all()
+    
+    if query:
+        products = products.filter(
+            Q(title__icontains=query) |
+            Q(description__icontains=query) |
+            Q(category__category_name__icontains=query)  
+        ).distinct()
+    
+    return render(request, 'search.html', {'products': products, 'query': query})
+
 def add_to_cart(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     cart, created = Cart.objects.get_or_create(user=request.user)
@@ -153,6 +167,7 @@ def add_to_cart(request, product_id):
         return redirect('product_page:cart')
 
     return redirect('product_page:shop')
+
 
 
 def cart(request):
@@ -377,7 +392,7 @@ def place_order(request):
     shipping_fee = request.session.get('shipping_fee')
     grand_total = request.session.get('grand_total')
     address_id = request.session.get('selected_address', {}).get('id')
-    payment_method = request.session.get('selected_address', {}).get('payment_method')
+    payment_method = request.POST.get('payment_method')
     payment_id = request.POST.get('payment_id')
 
     if not cart_items_data or not address_id:
@@ -417,7 +432,6 @@ def place_order(request):
             product.save()
 
         # Clear the cart after placing the order
-        # Assuming you have a CartItem model associated with the user
         CartItem.objects.filter(cart__user=request.user).delete()
 
         # Handle RazorPay payment
@@ -430,7 +444,6 @@ def place_order(request):
     except Exception as e:
         messages.error(request, f"An error occurred while placing the order: {e}")
         return redirect('product_page:checkout')
-
 
 def order_success(request, order_number):
     
