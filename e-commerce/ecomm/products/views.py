@@ -62,17 +62,16 @@ def shop(request):
     elif sort == 'z_a':
         product_list = product_list.order_by('-title')
 
-
     for product in product_list:
         product.availability_status = 'in_stock' if product.quantity > 0 else 'sold_out'
         product.save()
-        
+
     product_paginator = Paginator(product_list, 6)
     page_number = request.GET.get('page')
     product_list = product_paginator.get_page(page_number)
 
     categories = Category.objects.filter(is_active=True)
-    brands = Brand.objects.filter(category__category_name=category_name) if category_name else Brand.objects.none()
+    brands = Brand.objects.filter(is_active=True)  # Fetch all active brands irrespective of category
 
     sizes = Size.objects.all()
     colors = Color.objects.all()
@@ -91,7 +90,7 @@ def shop(request):
         'cart_items_count': cart_items_count,
         'product_error': request.session.pop('product_error', None)
     }
-   
+
     return render(request, 'shop.html', context)
 
 

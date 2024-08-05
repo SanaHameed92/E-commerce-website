@@ -155,7 +155,7 @@
                             {% for brand in brands %}
                             {% if brand.is_active %}
                             <li>
-                                <a href="?category={{ selected_category }}&brand={{ brand.brand_name }}">{{ brand.brand_name }}</a>
+                                <a href="{% url 'product_page:shop' %}?brand={{ brand.brand_name }}"{% if selected_brand == brand.brand_name %} class="active"{% endif %}>{{ brand.brand_name }}</a>
                             </li>
                         {% endif %}
                             {% endfor %}

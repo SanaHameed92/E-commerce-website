@@ -121,6 +121,7 @@ class Order(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')  # Added status field
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    payment_id = models.CharField(max_length=255, blank=True, null=True) 
 
     def save(self, *args, **kwargs):
         if not self.order_number:
