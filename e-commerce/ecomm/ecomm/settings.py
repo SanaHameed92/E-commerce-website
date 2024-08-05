@@ -189,3 +189,6 @@ LOGOUT_REDIRECT_URL ='/'
 
 
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
+
+RAZORPAY_API_KEY = 'rzp_test_Yl6grfBbwpSDvh'
+RAZORPAY_API_SECRET_KEY = '01h2uvlmHvVJROKnRboyx2pi'

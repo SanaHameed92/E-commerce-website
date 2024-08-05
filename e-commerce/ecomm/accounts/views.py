@@ -160,21 +160,18 @@ def admin_products(request):
 def edit_product(request, pk):
     product = get_object_or_404(Product, pk=pk)
     categories = Category.objects.all()
-
     existing_images = product.images.all()
-    
+
     if request.method == 'POST':
         form = ProductForm(request.POST, request.FILES, instance=product)
         image_form = ProductImageForm(request.POST, request.FILES)
-        
-        
+
         if form.is_valid():
             product_instance = form.save(commit=False)
             product_instance.updated_by = request.user  # Assuming you have an updated_by field
-            product.sizes.set(form.cleaned_data['sizes'])
-            product.colors.set(form.cleaned_data['colors'])
-          
             product_instance.save()
+
+            form.save_m2m()  # Save many-to-many data (sizes and colors)
 
             for image in existing_images:
                 image_field_name = f'image_{image.id}'
@@ -195,7 +192,8 @@ def edit_product(request, pk):
         'product': product, 
         'categories': categories, 
         'image_form': image_form,
-        'existing_images': existing_images})
+        'existing_images': existing_images
+    })
 
 
 

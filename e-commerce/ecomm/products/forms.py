@@ -35,7 +35,7 @@ class CategoryForm(forms.ModelForm):
 class BrandForm(forms.ModelForm):
     class Meta:
         model = Brand
-        fields = ['brand_name','category','is_active']
+        fields = ['brand_name',]
 
 class SizeForm(forms.ModelForm):
     class Meta:
