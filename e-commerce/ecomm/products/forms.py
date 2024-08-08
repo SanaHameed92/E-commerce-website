@@ -1,7 +1,7 @@
 # products/forms.py
 
 from django import forms
-from .models import Coupon, Product, ProductImage, Category, Brand, Size, Color
+from .models import Coupon, Product, ProductImage, Category, Brand, ProductVariant, Size, Color
 
 class ProductForm(forms.ModelForm):
     sizes = forms.ModelMultipleChoiceField(
@@ -47,7 +47,10 @@ class ColorForm(forms.ModelForm):
         model = Color
         fields = ['color_name']
 
-
+class ProductVariantForm(forms.ModelForm):
+    class Meta:
+        model = ProductVariant
+        fields = ['product','size', 'color', 'quantity', 'quantity','price']
 
 
 class ProductImageForm(forms.ModelForm):

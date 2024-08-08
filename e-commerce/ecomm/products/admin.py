@@ -2,12 +2,13 @@ from datetime import timezone
 from django.contrib import admin
 
 # Register your models here.
-from .models import Coupon, Product, Category, Brand, Size, Color, ProductImage,Order,OrderItem
+from .models import Coupon, Product, Category, Brand, Size, Color, ProductImage,Order,OrderItem,ProductVariant
 
 
 
 
 
+admin.site.register(ProductVariant)
 admin.site.register(ProductImage)
 admin.site.register(Order)
 admin.site.register(OrderItem)
@@ -69,3 +70,7 @@ class CouponAdmin(admin.ModelAdmin):
         return actions
 
 admin.site.register(Coupon, CouponAdmin)
+
+class ProductVariantInline(admin.TabularInline):
+    model = ProductVariant
+    extra = 1 

@@ -23,7 +23,7 @@ class Category(models.Model):
         return self.category_name
 
 class Brand(models.Model):
-    brand_name = models.CharField(max_length=255)
+    brand_name = models.CharField(max_length=255)   
     category = models.ManyToManyField(Category, related_name='brands')
     is_active = models.BooleanField(default=True)
 
@@ -47,7 +47,7 @@ class Color(models.Model):
 class Product(models.Model):
     AVAILABILITY_CHOICES = [
         ('in_stock', _('In Stock')),
-        ('sold_out', _('Sold Out')),
+        ('out_of_stock', _('Out of Stock')),
     ]
 
     title = models.CharField(max_length=100)
@@ -72,6 +72,8 @@ class Product(models.Model):
     popularity = models.IntegerField(default=0)
     sizes = models.ManyToManyField(Size, blank=True)
     colors = models.ManyToManyField(Color, blank=True)
+    
+    
 
     class Meta:
         ordering = ['-created_at']
@@ -118,7 +120,7 @@ class Order(models.Model):
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     order_number = models.CharField(max_length=50, unique=True, default=uuid.uuid4().hex)
     grand_total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')  # Added status field
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Ordered')  # Added status field
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     payment_id = models.CharField(max_length=255, blank=True, null=True) 
@@ -157,6 +159,8 @@ class CartItem(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
     added_at = models.DateTimeField(auto_now_add=True)
+    size = models.ForeignKey(Size, on_delete=models.CASCADE, null=True, blank=True)
+    color = models.ForeignKey(Color, on_delete=models.CASCADE, null=True, blank=True)
     
 
     @property
@@ -192,3 +196,15 @@ class Coupon(models.Model):
             self.status = 'expired'
         self.save(update_fields=['status'])
 
+class ProductVariant(models.Model):
+    product = models.ForeignKey(Product, related_name='variants', on_delete=models.CASCADE)
+    size = models.ForeignKey(Size, on_delete=models.CASCADE)
+    color = models.ForeignKey(Color, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=0)  # Stock quantity for this variant
+    price = models.DecimalField(max_digits=10, decimal_places=2)  # Price for this variant, if different
+
+    class Meta:
+        unique_together = ('product', 'size', 'color')
+
+    def __str__(self):
+        return f'{self.product.title} - {self.size.size_name} - {self.color.color_name}'

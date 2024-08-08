@@ -21,8 +21,6 @@
             <div class="col-md-12 text-center">
                 <a href="{% url 'product_page:cart' %}" class="btn btn-secondary py-2">Back to Cart</a>
                 <a href="{% url 'add_address' %}?redirect_to=product_page:checkout" class="btn btn-primary py-2 ml-2">Add New Address</a>
-
-
             </div>
         </div>
 
@@ -32,23 +30,27 @@
                 <div class="col-md-12">
                     <h2 class="text-black h4">Shipping Address</h2>
                     <div class="form-group">
-                        <label for="selected_address">Select Address</label>
-                        <select id="selected_address" name="selected_address" class="form-control">
+                        <label for="selected_address">Select Address <span class="text-danger">*</span></label>
+                        <select id="selected_address" name="selected_address" class="form-control" required>
+                            <option value="" disabled selected>Select an address</option>
                             {% for address in addresses %}
                                 <option value="{{ address.id }}" {% if address.id == selected_address.id %}selected{% endif %}>
-                                    <h4>{{ address.first_name }} {{ address.last_name }}</h4>
-                                    {{ address.street_address }}, {{ address.city }}, {{ address.state }}, {{ address.country }}, {{ address.postal_code }}
+                                    {{ address.first_name }} {{ address.last_name }}, {{ address.street_address }}, {{ address.city }}, {{ address.state }}, {{ address.country }}, {{ address.postal_code }}
                                 </option>
                             {% endfor %}
                         </select>
                     </div>
                     <h2 class="text-black h4">Payment Method</h2>
                     <div class="form-group">
-                        <label for="payment_method">Select Payment Method</label>
-                        <select id="payment_method" name="payment_method" class="form-control">
-                            <option value="RazorPay">RazorPay</option>
-                            <option value="COD">Cash on Delivery</option>
-                        </select>
+                        <label>Select Payment Method <span class="text-danger">*</span></label>
+                        <div>
+                            <input type="radio" id="razorpay" name="payment_method" value="RazorPay" class="mr-2" onclick="togglePaymentButton('razorpay')" required>
+                            <label for="razorpay">RazorPay</label>
+                        </div>
+                        <div>
+                            <input type="radio" id="cod" name="payment_method" value="COD" class="mr-2" onclick="togglePaymentButton('cod')" required>
+                            <label for="cod">Cash on Delivery</label>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-12">
@@ -113,24 +115,31 @@
 
             <div class="row">
                 <div class="col-md-12 text-center">
-                    <button type="submit" class="btn btn-primary btn py-3">Place Order with COD</button>
-                    <button type="button" class="btn btn-primary payWithRazorpay btn py-3">Place Order with RazorPay</button>
+                    <button type="submit" class="btn btn-primary btn py-3 payment-button" id="payWithCOD" style="display: none;">Place Order with COD</button>
+                    <button type="button" class="btn btn-primary payWithRazorpay btn py-3 payment-button" id="payWithRazorpay" style="display: none;">Place Order with RazorPay</button>
                 </div>
             </div>
         </form>
     </div>
 </div>
 
-<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="{% static 'js/checkout.js' %}"></script>
 
-
+<script>
+    function togglePaymentButton(paymentMethod) {
+        document.querySelectorAll('.payment-button').forEach(function(button) {
+            button.style.display = 'none';
+        });
+        if (paymentMethod === 'razorpay') {
+            document.getElementById('payWithRazorpay').style.display = 'inline-block';
+        } else if (paymentMethod === 'cod') {
+            document.getElementById('payWithCOD').style.display = 'inline-block';
+        }
+    }
+</script>
 
 {% endblock %}
-
-
-
-
-

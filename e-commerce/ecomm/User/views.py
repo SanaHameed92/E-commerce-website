@@ -127,7 +127,14 @@ def reset_password(request):
 def my_orders(request):
     orders = Order.objects.filter(user=request.user).order_by('-created_at')
     return render(request, 'user/my_orders.html', {'orders': orders})
-    
+
+def delete_order(request, order_number):
+    order = get_object_or_404(Order, order_number=order_number, user=request.user)
+    if request.method == 'POST':
+        order.delete()
+        messages.success(request, 'Order has been deleted successfully.')
+        return redirect('my_orders')
+    return render(request, 'user/my_orders.html', {'order': order})
 
 
 def order_detail(request, order_number):
