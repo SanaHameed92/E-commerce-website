@@ -18,7 +18,8 @@
                         <th>Date</th>
                         <th>Status</th>
                         <th>Total</th>
-                        <th>Details</th>
+                        <th>Payment Method</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -27,8 +28,8 @@
                         <td>{{ order.order_number }}</td>
                         <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
                         <td>
-                            {% if order.status == 'Pending' %}
-                                <span class="status-pending">{{ order.status }}</span>
+                            {% if order.status == 'Ordered' %}
+                                <span class="status-ordered">{{ order.status }}</span>
                             {% elif order.status == 'Completed' %}
                                 <span class="status-completed">{{ order.status }}</span>
                             {% elif order.status == 'Cancelled' %}
@@ -38,7 +39,16 @@
                             {% endif %}
                         </td>
                         <td class="total-amount">${{ order.grand_total|floatformat:2 }}</td>
-                        <td><a href="{% url 'order_detail' order_number=order.order_number %}" class="btn btn-primary btn-sm">View Details</a></td>
+                        <td>{{ order.payment_method }}</td>
+                        <td>
+                            <div style="display: flex; align-items: center;">
+                                <a href="{% url 'order_detail' order_number=order.order_number %}" class="btn btn-primary btn-sm" style="margin-right: 5px;">View Details</a>
+                                <form action="{% url 'delete_order' order_number=order.order_number %}" method="post" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-sm"><i class="fa fa-times"></i></button>
+                                </form>
+                            </div>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

@@ -22,33 +22,32 @@
                         </div>
                         <div class="d-flex">
                             <div class="dropdown mr-1 ml-md-auto">
-                              <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" id="dropdownMenuOffset" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                Categories
-                              </button>
-                              <div class="dropdown-menu" aria-labelledby="dropdownMenuOffset">
-                                <a class="dropdown-item" href="{% url 'product_page:shop' %}?category=Men">Men</a>
-                                <a class="dropdown-item" href="{% url 'product_page:shop' %}?category=Women">Women</a>
-                                <a class="dropdown-item" href="{% url 'product_page:shop' %}?category=Boys">Boys</a>
-                                <a class="dropdown-item" href="{% url 'product_page:shop' %}?category=Girls">Girls</a>
+                                <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" id="dropdownMenuOffset" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                  Categories
+                                </button>
+                                <div class="dropdown-menu" aria-labelledby="dropdownMenuOffset">
+                                  <a class="dropdown-item" href="{% url 'product_page:shop' %}?category=Men">Men</a>
+                                  <a class="dropdown-item" href="{% url 'product_page:shop' %}?category=Women">Women</a>
+                                  <a class="dropdown-item" href="{% url 'product_page:shop' %}?category=Boys">Boys</a>
+                                  <a class="dropdown-item" href="{% url 'product_page:shop' %}?category=Girls">Girls</a>
+                                </div>
                               </div>
-                            </div>
-                            <div class="btn-group">
-                              <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" id="dropdownMenuReference" data-toggle="dropdown">Reference</button>
-                              <div class="dropdown-menu" aria-labelledby="dropdownMenuReference">
-                                <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=popularity">Popularity</a>
-                                <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=a_z">Name, A to Z</a>
-                                <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=z_a">Name, Z to A</a>
-                                <a class="dropdown-item" href="#">Average Ratings</a>
-                                <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=price_low_high">Price, low to high</a>
-                                <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=price_high_low">Price, high to low</a>
+                              <div class="btn-group">
+                                <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" id="dropdownMenuReference" data-toggle="dropdown">Reference</button>
+                                <div class="dropdown-menu" aria-labelledby="dropdownMenuReference">
+                                  <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=popularity">Popularity</a>
+                                  <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=a_z">Name, A to Z</a>
+                                  <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=z_a">Name, Z to A</a>
+                                  <a class="dropdown-item" href="#">Average Ratings</a>
+                                  <div class="dropdown-divider"></div>
+                                  <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=price_low_high">Price, low to high</a>
+                                  <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=price_high_low">Price, high to low</a>
+                                </div>
                               </div>
-                            </div>
                         </div>
-                        
-                        
                     </div>
                 </div>
+                
 
                 {% if product_error %}
                 <div class="alert alert-danger">
@@ -132,60 +131,71 @@
             </div>
 
             <div class="col-md-3 order-1 mb-5 mb-md-0">
-                <div class="border p-4 rounded mb-4">
-                    <h3 class="mb-3 h6 text-uppercase text-black d-block">Categories</h3>
-                    <ul class="list-unstyled mb-0">
-                        {% if categories %}
+                <form method="get" action="{% url 'product_page:shop' %}">
+                    <div class="border p-4 rounded mb-4">
+                        <h3 class="mb-3 h6 text-uppercase text-black d-block">Filters</h3>
+
+                        <div class="mb-3">
+                            <h4 class="h6 text-uppercase text-black">Categories</h4>
                             {% for category in categories %}
-                                <li class="mb-1">
-                                    <a href="?category={{ category.category_name }}" class="d-flex{% if selected_category == category.category_name %} is_active{% endif %}">
-                                        <span>{{ category.category_name }}</span>
-                                        <span class="text-black ml-auto">({{ category.products.count }})</span>
-                                    </a>
-                                </li>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="category" value="{{ category.category_name }}" id="category_{{ category.id }}" {% if selected_category == category.category_name %}checked{% endif %}>
+                                    <label class="form-check-label" for="category_{{ category.id }}">
+                                        {{ category.category_name }}
+                                    </label>
+                                </div>
                             {% endfor %}
-                        {% else %}
-                            <li>No categories available.</li>
-                        {% endif %}
-                    </ul>
+                        </div>
 
-                    <h3 class="mb-3 h6 text-uppercase text-black d-block">Brands</h3>
-                    <ul class="list-unstyled mb-2">
-                        {% if brands %}
+                        <div class="mb-3">
+                            <h4 class="h6 text-uppercase text-black">Brands</h4>
                             {% for brand in brands %}
-                            {% if brand.is_active %}
-                            <li>
-                                <a href="{% url 'product_page:shop' %}?brand={{ brand.brand_name }}"{% if selected_brand == brand.brand_name %} class="active"{% endif %}>{{ brand.brand_name }}</a>
-                            </li>
-                        {% endif %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="brand" value="{{ brand.brand_name }}" id="brand_{{ brand.id }}" {% if selected_brand == brand.brand_name %}checked{% endif %}>
+                                    <label class="form-check-label" for="brand_{{ brand.id }}">
+                                        {{ brand.brand_name }}
+                                    </label>
+                                </div>
                             {% endfor %}
-                        {% else %}
-                            <li>No brands available for selected category.</li>
-                        {% endif %}
-                    </ul>
+                        </div>
 
-                    <h3 class="mb-3 h6 text-uppercase text-black d-block">Sizes</h3>
-                    <ul class="list-unstyled mb-2">
-                        {% for size in sizes %}
-                            <li>
-                                <a href="?size={{ size.size_name }}">{{ size.size_name }}</a>
-                            </li>
-                        {% endfor %}
-                    </ul>
+                        <div class="mb-3">
+                            <h4 class="h6 text-uppercase text-black">Sizes</h4>
+                            {% for size in sizes %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="size" value="{{ size.size_name }}" id="size_{{ size.id }}" {% if selected_size == size.size_name %}checked{% endif %}>
+                                    <label class="form-check-label" for="size_{{ size.id }}">
+                                        {{ size.size_name }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
 
-                    <h3 class="mb-3 h6 text-uppercase text-black d-block">Colors</h3>
-                    <ul class="list-unstyled mb-2">
-                        {% for color in colors %}
-                            <li>
-                                <a href="?color={{ color.color_name }}">{{ color.color_name }}</a>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                    
-                </div>
+                        <div class="mb-3">
+                            <h4 class="h6 text-uppercase text-black">Colors</h4>
+                            {% for color in colors %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="color" value="{{ color.color_name }}" id="color_{{ color.id }}" {% if selected_color == color.color_name %}checked{% endif %}>
+                                    <label class="form-check-label" for="color_{{ color.id }}">
+                                        {{ color.color_name }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <h4 class="h6 text-uppercase text-black">Price Range</h4>
+                            <input type="number" name="min_price" placeholder="Min Price" value="{{ min_price }}" class="form-control mb-2">
+                            <input type="number" name="max_price" placeholder="Max Price" value="{{ max_price }}" class="form-control">
+                        </div>
+
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Apply Filters</button>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
-
 {% endblock %}

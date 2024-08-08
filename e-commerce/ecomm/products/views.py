@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import uuid
 from django.shortcuts import render, get_object_or_404
-from .models import Cart, CartItem, Coupon, Order, OrderItem, Product, Category, Brand, Size, Color
+from .models import Cart, CartItem, Coupon, Order, OrderItem, Product, Category, Brand, ProductVariant, Size, Color
 from django.core.paginator import Paginator
 from django.shortcuts import render,redirect
 from django.urls import reverse
@@ -9,7 +9,9 @@ from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
 from User.models import Address
 from django.db.models import Count
-from .forms import CouponForm
+from .forms import CouponForm, ProductVariantForm
+import razorpay
+
 
 
 def shop(request):
@@ -18,6 +20,8 @@ def shop(request):
     color = request.GET.get('color')
     sort = request.GET.get('sort')
     size = request.GET.get('size')
+    min_price = request.GET.get('min_price')
+    max_price = request.GET.get('max_price')
     cart_items_count = CartItem.objects.filter(cart__user=request.user).count()
 
     product_list = Product.objects.all()
@@ -38,15 +42,30 @@ def shop(request):
     if size:
         try:
             selected_size = Size.objects.get(size_name=size)
-            product_list = product_list.filter(sizes__in=[selected_size])
+            product_list = product_list.filter(sizes=selected_size)
         except Size.DoesNotExist:
+            pass
+
+    # Apply price range filter
+    if min_price:
+        try:
+            min_price = float(min_price)
+            product_list = product_list.filter(original_price__gte=min_price)
+        except ValueError:
+            pass
+    if max_price:
+        try:
+            max_price = float(max_price)
+            product_list = product_list.filter(original_price__lte=max_price)
+        except ValueError:
             pass
 
     # Annotate products with purchase counts
     product_list = product_list.annotate(cart_count=Count('cartitem'))
 
+    # Apply sorting
     if sort == 'popularity':
-        product_list = product_list.order_by('-cart_count')  # Sort by dynamic popularity
+        product_list = product_list.order_by('-cart_count')
     elif sort == 'price_low_high':
         product_list = product_list.order_by('original_price')
     elif sort == 'price_high_low':
@@ -61,18 +80,17 @@ def shop(request):
         product_list = product_list.order_by('title')
     elif sort == 'z_a':
         product_list = product_list.order_by('-title')
+    else:
+        product_list = product_list.order_by('-created_at')
 
-    for product in product_list:
-        product.availability_status = 'in_stock' if product.quantity > 0 else 'sold_out'
-        product.save()
-
+    # Paginate the product list
     product_paginator = Paginator(product_list, 6)
     page_number = request.GET.get('page')
     product_list = product_paginator.get_page(page_number)
 
+    # Fetch categories, brands, sizes, and colors
     categories = Category.objects.filter(is_active=True)
-    brands = Brand.objects.filter(is_active=True)  # Fetch all active brands irrespective of category
-
+    brands = Brand.objects.filter(is_active=True)
     sizes = Size.objects.all()
     colors = Color.objects.all()
 
@@ -87,6 +105,8 @@ def shop(request):
         'selected_color': color,
         'selected_size': size,
         'selected_sort': sort,
+        'min_price': min_price,
+        'max_price': max_price,
         'cart_items_count': cart_items_count,
         'product_error': request.session.pop('product_error', None)
     }
@@ -99,19 +119,22 @@ def shop_single(request, product_id):
     product = get_object_or_404(Product, pk=product_id)
     features_products = Product.objects.filter(trending=True)[:3]
 
-    # Check if there was an error related to exceeding quantity
-    product_error = request.session.pop('product_error', None)
-    if product_error:
-        messages.error(request, product_error)
+    # Get sizes and colors for the product
+    sizes = product.sizes.all()
+    colors = product.colors.all()
 
-
-    messages_for_shop = [msg for msg in messages.get_messages(request) if 'shop-single' in msg.tags]
+    # Display error message if any
+    product_error = messages.get_messages(request)
+    for message in product_error:
+        if 'shop-single' in message.tags:
+            messages.error(request, message.message)
 
     context = {
         'product': product,
         'featured_items': features_products,
+        'sizes': sizes,
+        'colors': colors,
         'availability_message': "Only 1 item left" if product.quantity == 1 else "",
-        'messages': messages_for_shop 
     }
     return render(request, 'shop-single.html', context)
 
@@ -119,20 +142,28 @@ def add_to_cart(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     cart, created = Cart.objects.get_or_create(user=request.user)
     
-    # Get the quantity from the POST request
+    # Get the quantity, size, and color from the POST request
     quantity = int(request.POST.get('quantity', 1))
+    size_id = request.POST.get('size')
+    color_id = request.POST.get('color')
+    
+    # Retrieve size and color if provided
+    size = Size.objects.get(id=size_id) if size_id else None
+    color = Color.objects.get(id=color_id) if color_id else None
     
     # Check if there is enough stock available
-    if product.quantity < quantity:
+    if quantity > product.quantity:
         messages.error(request, 'Not enough stock available.')
         return redirect('product_page:shop-single', product_id=product.id)
     
     # Check if the cart item already exists
-    cart_item, item_created = CartItem.objects.get_or_create(cart=cart, product=product)
+    cart_item, item_created = CartItem.objects.get_or_create(
+        cart=cart, product=product, size=size, color=color
+    )
     
     if not item_created:
         if cart_item.quantity + quantity > product.quantity:
-            messages.error(request, 'Maximum stock limit reached for this product.')
+            messages.error(request, 'Not enough stock available to add this quantity.')
             return redirect('product_page:shop-single', product_id=product.id)
         
         if cart_item.quantity + quantity > product.max_qty_per_person:
@@ -142,17 +173,18 @@ def add_to_cart(request, product_id):
         cart_item.quantity += quantity
         cart_item.save()
     else:
+        if quantity > product.max_qty_per_person:
+            messages.error(request, f'You can only add up to {product.max_qty_per_person} items of this product.')
+            return redirect('product_page:shop-single', product_id=product.id)
+        
         cart_item.quantity = quantity
         cart_item.save()
-
-
+    
     referrer = request.META.get('HTTP_REFERER', '')
-
     if 'shop-single' in referrer:
         return redirect('product_page:cart')
-
+    
     return redirect('product_page:shop')
-
 
 def cart(request):
     cart, created = Cart.objects.get_or_create(user=request.user)
@@ -204,76 +236,75 @@ def product_filter_by_color(request):
 
 
 def checkout(request):
-    # Get or create the cart for the user
     cart, created = Cart.objects.get_or_create(user=request.user)
     cart_items = CartItem.objects.filter(cart=cart)
-    
-    # Calculate totals and fees
+
     total = sum(item.total_price for item in cart_items)
-    shipping_fee = 50 if total <= 350 else 0    
+    shipping_fee = 50 if total <= 350 else 0
     grand_total = total + shipping_fee
 
-    # Calculate the estimated delivery date (e.g., 5 days from now)
     delivery_days = 5
     estimated_delivery_date = datetime.now() + timedelta(days=delivery_days)
-    formatted_delivery_date = estimated_delivery_date.strftime('%d %b %Y')  # Format as "25 Jul 2024"
+    formatted_delivery_date = estimated_delivery_date.strftime('%d %b %Y')
 
-    # Get user's addresses
     addresses = Address.objects.filter(user=request.user).order_by('-is_default', '-created_at')
-    default_address = addresses.filter(is_default=True).first()
 
     if request.method == 'POST':
         address_id = request.POST.get('selected_address')
         payment_method = request.POST.get('payment_method')
-        order_notes = request.POST.get('order_notes')
 
-        if address_id:
-            try:
-                # Fetch the selected address
-                selected_address = Address.objects.get(id=address_id)
-            except Address.DoesNotExist:
-                messages.error(request, "Selected address does not exist.")
-                return redirect('checkout')
+        if not address_id:
+            messages.error(request, "Please select a shipping address.")
+            return redirect('product_page:checkout')
 
-            # Format address
-            formatted_address = (f"{selected_address.first_name} {selected_address.last_name}, "
-                                  f"{selected_address.street_address}, {selected_address.city}, "
-                                  f"{selected_address.state}, {selected_address.country}, "
-                                  f"{selected_address.postal_code}")
+        if not payment_method:
+            messages.error(request, "Please select a payment method.")
+            return redirect('product_page:checkout')
 
-            # Prepare data for session
-            cart_items_data = [
-                {
-                    'title': item.product.title,
-                    'quantity': item.quantity,
-                    'total_price': float(item.total_price)  # Convert to float for JSON serialization
-                } for item in cart_items
-            ]
-            request.session['cart_items'] = cart_items_data
-            request.session['total'] = float(total)
-            request.session['shipping_fee'] = float(shipping_fee)
-            request.session['grand_total'] = float(grand_total)
-            request.session['selected_address'] = {
-                'address': formatted_address,
-                'id': selected_address.id,
-                'payment_method': payment_method,
-            }
-            request.session['estimated_delivery_date'] = formatted_delivery_date  # Add estimated delivery date
-            request.session.modified = True
+        try:
+            selected_address = Address.objects.get(id=address_id)
+        except Address.DoesNotExist:
+            messages.error(request, "Selected address does not exist.")
+            return redirect('product_page:checkout')
 
+        formatted_address = (f"{selected_address.first_name} {selected_address.last_name}, "
+                              f"{selected_address.street_address}, {selected_address.city}, "
+                              f"{selected_address.state}, {selected_address.country}, "
+                              f"{selected_address.postal_code}")
+
+        cart_items_data = [
+            {
+                'title': item.product.title,
+                'quantity': item.quantity,
+                'total_price': float(item.total_price)
+            } for item in cart_items
+        ]
+        request.session['cart_items'] = cart_items_data
+        request.session['total'] = float(total)
+        request.session['shipping_fee'] = float(shipping_fee)
+        request.session['grand_total'] = float(grand_total)
+        request.session['selected_address'] = {
+            'address': formatted_address,
+            'id': selected_address.id,
+            'payment_method': payment_method,
+        }
+        request.session['estimated_delivery_date'] = formatted_delivery_date
+
+        if payment_method == 'RazorPay':
+            return redirect('product_page:razorpaycheck')
+        elif payment_method == 'COD':
             return redirect('product_page:order_summary')
         else:
-            messages.error(request, "Please select a shipping address.")
-            return redirect('checkout')
+            messages.error(request, "Invalid payment method selected.")
+            return redirect('product_page:checkout')
 
     context = {
         'cart_items': cart_items,
         'total': total,
-        'addresses': addresses,
-        'grand_total': grand_total,
         'shipping_fee': shipping_fee,
-        'default_address': default_address,
-        'formatted_delivery_date': formatted_delivery_date,  # Pass to template context
+        'grand_total': grand_total,
+        'addresses': addresses,
+        'formatted_delivery_date': formatted_delivery_date,
     }
 
     return render(request, 'user/checkout.html', context)
@@ -333,60 +364,61 @@ def update_cart(request):
 
 
 def place_order(request):
-    # Retrieve session data
-    cart_items_data = request.session.get('cart_items')
-    total = request.session.get('total')
-    shipping_fee = request.session.get('shipping_fee')
-    grand_total = request.session.get('grand_total')
-    #selected_address = request.session.get('selected_address')
-    address_id = request.session.get('selected_address', {}).get('id')
-    payment_method = request.session.get('selected_address', {}).get('payment_method')
-    payment_id = request.POST.get('payment_id')
+    if request.method == 'POST':
+        cart_items_data = request.session.get('cart_items', [])
+        total = request.session.get('total', 0)
+        shipping_fee = request.session.get('shipping_fee', 0)
+        grand_total = request.session.get('grand_total', 0)
+        selected_address = request.session.get('selected_address', {})
+        address_id = selected_address.get('id')
+        payment_method = selected_address.get('payment_method')
+        payment_id = request.POST.get('payment_id')
 
-    if not cart_items_data or not address_id:
-        messages.error(request, "Incomplete order details.")
-        return redirect('product_page:checkout')
-    try:
+        if not cart_items_data or not address_id:
+            return JsonResponse({'status': "Incomplete order details"}, status=400)
 
-        selected_address = Address.objects.get(id=address_id)
-        # Create an Order   
-        order = Order.objects.create(
-            user=request.user,
-            address=selected_address,  # Store address as a string
-            payment_method=payment_method,
-            order_notes=request.POST.get('order_notes', ''),
-            total_amount=total,
-            shipping_fee=shipping_fee,
-            grand_total=grand_total,
-            order_number=str(uuid.uuid4()), # Generate a unique order number
-            status='Ordered',
-            payment_id = payment_id
-        )
+        try:
+            selected_address = Address.objects.get(id=address_id)
 
-        # Create Order Items and update product popularity
-        for item_data in cart_items_data:
-            product = Product.objects.get(title=item_data['title'])
-            OrderItem.objects.create(
-                order=order,
-                product=product,
-                quantity=item_data['quantity'],
-                total_price=item_data['total_price']
+            for item_data in cart_items_data:
+                if item_data['quantity'] <= 0:
+                    return JsonResponse({'status': f"Invalid quantity for product {item_data['title']}."}, status=400)
+
+            order = Order.objects.create(
+                user=request.user,
+                address=selected_address,
+                payment_method=payment_method,
+                total_amount=total,
+                shipping_fee=shipping_fee,
+                grand_total=grand_total,
+                order_number=str(uuid.uuid4()),
+                status='Ordered',
+                payment_id=payment_id,
             )
-            # Update product quantity and popularity
-            product.quantity -= item_data['quantity']
-            product.popularity += item_data['quantity']
-            product.save()
 
-        # Clear the cart after placing the order
-        CartItem.objects.filter(cart__user=request.user).delete()
-        if payment_method == 'Paid by RazorPay':
-            return JsonResponse({'status:"Your order has been placed successfully"'})
-        # Redirect to order success page with the order number
-        return redirect('product_page:order_success', order_number=order.order_number)
+            for item_data in cart_items_data:
+                product = Product.objects.get(title=item_data['title'])
 
-    except Exception as e:
-        messages.error(request, f"An error occurred while placing the order: {e}")
-        return redirect('product_page:checkout')
+                if product.quantity < item_data['quantity']:
+                    return JsonResponse({'status': f"Insufficient stock for product {product.title}."}, status=400)
+
+                OrderItem.objects.create(
+                    order=order,
+                    product=product,
+                    quantity=item_data['quantity'],
+                    total_price=item_data['total_price']
+                )
+
+                product.quantity -= item_data['quantity']
+                product.popularity += item_data['quantity']
+                product.save()
+
+            CartItem.objects.filter(cart__user=request.user).delete()
+
+            return redirect('product_page:order_success', order_number=order.order_number)
+
+        except Exception as e:
+            return JsonResponse({'status': f"An error occurred while placing the order: {e}"}, status=500)
 
 
 
@@ -404,21 +436,7 @@ def order_success(request, order_number):
     return render(request, 'user/order_success.html', context)
 
 
-def razorpaycheck(request):
-    cart = Cart.objects.filter(user=request.user).first()
-    if not cart:
-        return JsonResponse({'error': 'Cart not found'}, status=404)
 
-    total_price = sum(item.total_price for item in CartItem.objects.filter(cart=cart))
-    shipping_fee = 50 if total_price <= 350 else 0 # Example shipping fee, replace with your actual logic
-    grand_total = total_price + shipping_fee
-
-    return JsonResponse({
-        'total_price': grand_total,
-        'first_name': request.user.first_name,
-        'email': request.user.email,
-        'phone_number': request.user.phone_number,
-    })
 
 
 def coupon_list(request):
@@ -460,3 +478,106 @@ def coupon_delete(request, pk):
     return redirect('product_page:coupon_list')
 
 
+def list_product_variants(request):
+    variants = ProductVariant.objects.all()
+    return render(request, 'admin_side/product_variants.html', {'variants': variants})
+
+def add_product_variant(request):
+    if request.method == 'POST':
+        form = ProductVariantForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect(reverse('product_page:list_product_variants'))
+    else:
+        form = ProductVariantForm()
+    return render(request, 'admin_side/product_variants_form.html', {'form': form})
+
+def edit_product_variant(request, pk):
+    variant = get_object_or_404(ProductVariant, pk=pk)
+    if request.method == 'POST':
+        form = ProductVariantForm(request.POST, instance=variant)
+        if form.is_valid():
+            form.save()
+            return redirect(reverse('product_page:list_product_variants'))
+    else:
+        form = ProductVariantForm(instance=variant)
+    return render(request, 'admin_side/product_variants_form.html', {'form': form})
+
+def delete_product_variant(request, pk):
+    variant = get_object_or_404(ProductVariant, pk=pk)
+    if request.method == 'POST':
+        variant.delete()
+        return redirect(reverse('product_page:list_product_variants'))
+    return render(request, 'confirm_delete.html', {'object': variant})
+
+
+def razorpaycheck(request):
+    cart = Cart.objects.filter(user=request.user).first()
+    
+    total_price = sum(item.total_price for item in CartItem.objects.filter(cart=cart))
+    shipping_fee = 50 if total_price <= 350 else 0  # Example shipping fee, replace with your actual logic
+    grand_total = total_price + shipping_fee
+    
+    # You can decide on how to get the address_id, for simplicity, I'm using the first address
+    address = Address.objects.filter(user=request.user).first()
+    
+    if not address:
+        return JsonResponse({'error': 'No address found for the user'}, status=400)
+    
+    # Create a preliminary order with status 'Pending'
+    order = Order.objects.create(
+        user=request.user,
+        address=address,
+        payment_method='RazorPay',  # Since it's a razorpaycheck
+        total_amount=total_price,
+        shipping_fee=shipping_fee,
+        grand_total=grand_total,
+        order_number=str(uuid.uuid4()),
+        status='Pending',
+    )
+    
+    return JsonResponse({
+        'total_price': grand_total,
+        'first_name': request.user.first_name,
+        'email': request.user.email,
+        'phone_number': request.user.phone_number,
+        'order_id': order.order_number,  # Include order_id in the response
+    })
+
+def confirm_order_razorpay(request):
+    if request.method == 'POST':
+        order_number = request.POST.get('order_id')
+        payment_id = request.POST.get('payment_id')
+        
+        try:
+            order = Order.objects.get(order_number=order_number)
+            order.payment_id = payment_id
+            order.status = 'Ordered'
+            order.save()
+            
+            cart_items = CartItem.objects.filter(cart__user=request.user)
+            for cart_item in cart_items:
+                product = cart_item.product
+                
+                if product.quantity < cart_item.quantity:
+                    return JsonResponse({'status': f"Insufficient stock for product {product.title}."}, status=400)
+                
+                OrderItem.objects.create(
+                    order=order,
+                    product=product,
+                    quantity=cart_item.quantity,
+                    total_price=cart_item.total_price,
+                )
+                
+                product.quantity -= cart_item.quantity
+                product.popularity += cart_item.quantity
+                product.save()
+            
+            CartItem.objects.filter(cart__user=request.user).delete()
+            
+            return JsonResponse({'status': 'Order placed successfully', 'order_number': order.order_number})
+        
+        except Order.DoesNotExist:
+            return JsonResponse({'status': 'Invalid order ID'}, status=400)
+        except Exception as e:
+            return JsonResponse({'status': f"An error occurred while placing the order: {e}"}, status=500)

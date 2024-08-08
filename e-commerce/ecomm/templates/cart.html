@@ -1,5 +1,3 @@
-
-
 {% extends "base.html" %}
 {% load static %}
 
@@ -51,8 +49,6 @@
 
 <div class="site-section">
     <div class="container">
-       
-        
         {% if cart_items %}
         <div class="row mb-5">
             <form id="cart-form">
@@ -63,6 +59,8 @@
                             <tr>
                                 <th class="product-thumbnail">Image</th>
                                 <th class="product-name">Product</th>
+                                <th class="product-size">Size</th>
+                                <th class="product-color">Color</th>
                                 <th class="product-price">Price</th>
                                 <th class="product-quantity">Quantity</th>
                                 <th class="product-total">Total</th>
@@ -80,7 +78,9 @@
                                         <h2 class="h5 text-black">{{ item.product.title }}</h2>
                                     </a>
                                 </td>
-                                <td>${{ item.product.original_price }}</td>
+                                <td class="product-size">{{ item.size }}</td>
+                                <td class="product-color">{{ item.color }}</td>
+                                <td class="product-price">${{ item.product.original_price }}</td>
                                 <td>
                                     <div class="input-group mb-3" style="max-width: 120px;">
                                         <input type="number" class="form-control quantity-input" data-item-id="{{ item.id }}" value="{{ item.quantity }}" min="1">
@@ -105,7 +105,6 @@
                         <p><a href="{% url 'product_page:shop' %}" class="buy-now btn btn-sm btn-primary">Continue Shopping</a></p>
                     </div>
                 </div>
-                
             </div>
             <div class="col-md-6 pl-5">
                 <div class="row justify-content-end">
@@ -134,7 +133,7 @@
 
                         <div class="row">
                             <div class="col-md-12">
-                                <a href="{% url 'product_page:checkout'%}" class="btn btn-primary btn-lg py-3 btn-block">Proceed To Checkout</a>
+                                <a href="{% url 'product_page:checkout' %}" class="btn btn-primary btn-lg py-3 btn-block">Proceed To Checkout</a>
                             </div>
                         </div>
                     </div>

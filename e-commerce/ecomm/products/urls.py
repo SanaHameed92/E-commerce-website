@@ -25,6 +25,12 @@ urlpatterns = [
     path('coupons/add/', views.coupon_add, name='coupon_add'),
     path('coupons/edit/<int:pk>/', views.coupon_edit, name='coupon_edit'),
     path('coupons/delete/<int:pk>/', views.coupon_delete, name='coupon_delete'),
+    path('variants/', views.list_product_variants, name='list_product_variants'),
+    path('variants/add/', views.add_product_variant, name='add_product_variant'),
+    path('variants/edit/<int:pk>/', views.edit_product_variant, name='edit_product_variant'),
+    path('variants/delete/<int:pk>/', views.delete_product_variant, name='delete_product_variant'),
+    path('confirm-order-razorpay/', views.confirm_order_razorpay, name='confirm_order_razorpay'),  # URL for confirm_order_razorpay view
+    
     
     
     

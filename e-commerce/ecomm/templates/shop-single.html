@@ -4,68 +4,56 @@
 {% block content %}
 <style>
     /* Add this CSS to your stylesheet */
+    .alert-container {
+        margin-top: 20px;
+    }
 
-/* Container for all alert messages */
-.alert-container {
-    margin-top: 20px;
-}
+    .alert {
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        font-size: 16px;
+        line-height: 1.5;
+    }
 
-/* Individual alert message styling */
-.alert {
-    padding: 15px;
-    border-radius: 5px;
-    margin-bottom: 15px;
-    font-size: 16px;
-    line-height: 1.5;
-}
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
 
-/* Alert types */
-.alert-success {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-}
+    .alert-error, .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
 
-.alert-error, .alert-danger {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-}
+    .alert-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+    }
 
-.alert-info {
-    background-color: #d1ecf1;
-    color: #0c5460;
-    border: 1px solid #bee5eb;
-}
+    .alert-warning {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeeba;
+    }
 
-.alert-warning {
-    background-color: #fff3cd;
-    color: #856404;
-    border: 1px solid #ffeeba;
-}
+    .alert .close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        cursor: pointer;
+        color: inherit;
+        font-size: 20px;
+        background: none;
+        border: none;
+    }
 
-/* Styling for alert close button */
-.alert .close {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    cursor: pointer;
-    color: inherit;
-    font-size: 20px;
-    background: none;
-    border: none;
-}
-
-/* Optional: Add transition for smooth appearance */
-.alert {
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
-}
-
-.alert-container .alert {
-    opacity: 1;
-}
-
+    .alert-container .alert {
+        opacity: 1;
+    }
 </style>
 
 <div class="bg-light py-3">
@@ -148,44 +136,54 @@
                         {% endfor %}
                     </div>
                 {% endif %}
-                <!-- Size Selection -->
-                <div class="mb-4">
-                    <h4>Select Size</h4>
-                    <select class="form-control">
-                        {% for size in product.sizes.all %}
-                            <option value="{{ size.id }}">{{ size.size_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
 
-                <!-- Color Selection -->
-                <div class="mb-4">
-                    <h4>Select Color</h4>
-                    <select class="form-control">
-                        {% for color in product.colors.all %}
-                            <option value="{{ color.id }}">{{ color.color_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
+                <!-- Product Form -->
                 <div class="mb-5">
                     <form method="POST" action="{% url 'product_page:add_to_cart' product.id %}">
                         {% csrf_token %}
-                        <input type="number" name="quantity" id="quantity-input" class="form-control text-center mb-3" value="1" placeholder="" aria-label="Example text with button addon" aria-describedby="button-addon1" min="1" max="{{ product.max_qty_per_person }}">
-                        <p>
+
+                        <!-- Size Selection -->
+                        <div class="mb-4">
+                            <label for="size">Size:</label>
+                            <select id="size" name="size" class="form-control" required>
+                                <option value="">Select Size</option>
+                                {% for size in sizes %}
+                                    <option value="{{ size.id }}">{{ size.size_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Color Selection -->
+                        <div class="mb-4">
+                            <label for="color">Color:</label>
+                            <select id="color" name="color" class="form-control" required>
+                                <option value="">Select Color</option>
+                                {% for color in colors %}
+                                    <option value="{{ color.id }}">{{ color.color_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Quantity Input -->
+                        <div class="mb-4">
+                            <label for="quantity">Quantity:</label>
+                            <input type="number" id="quantity" name="quantity" class="form-control text-center" value="1" min="1" max="{{ product.max_qty_per_person }}">
+                        </div>
+
+                        <div class="mb-5">
                             {% if product.availability_status == 'in_stock' %}
-                                <button type="submit" class="buy-now btn btn-sm btn-primary add-to-cart" data-max-quantity="{{ product.quantity }}">Add To Cart</button>
+                                <button type="submit" class="btn btn-primary">Add To Cart</button>
                             {% else %}
-                                <button class="btn btn-sm btn-danger" disabled>Out of stock</button>
+                                <button class="btn btn-danger" disabled>Out of stock</button>
                             {% endif %}
-                        </p>
+                        </div>
                     </form>
                 </div>
             </div>
         </div>
-      
     </div>
 </div>
+
 <div class="site-section block-3 site-blocks-2 bg-light">
     <div class="container">
         <div class="row justify-content-center">
@@ -208,16 +206,16 @@
                             <p class="text-primary font-weight-bold">${{ product.original_price }}</p>
                            
                             <div class="rating-container">
-                              <div class="rating">
-                                  {% for i in "12345" %}
-                                  {% if i|add:0 <= product.rating %}
-                                  <i class="fa fa-star"></i>
-                                  {% else %}
-                                  <i class="fa fa-star-o"></i>
-                                  {% endif %}
-                                  {% endfor %}
-                              </div>
-                          </div>
+                                <div class="rating">
+                                    {% for i in "12345" %}
+                                    {% if i|add:0 <= product.rating %}
+                                    <i class="fa fa-star"></i>
+                                    {% else %}
+                                    <i class="fa fa-star-o"></i>
+                                    {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
