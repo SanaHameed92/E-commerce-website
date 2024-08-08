@@ -105,7 +105,7 @@ def admin_dashboard(request):
     if request.user.is_authenticated and request.user.is_staff:
         return render(request, 'accounts/admin_dashboard.html', {'orders': orders})
     else:
-        return redirect('product_page:index')
+        return redirect('main_page:index')
 
 def admin_products(request):
     products = Product.objects.all()

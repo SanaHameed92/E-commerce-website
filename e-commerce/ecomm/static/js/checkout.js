@@ -16,7 +16,7 @@ $(document).ready(function () {
             success: function (response) {
                 var options = {
                     "key": "rzp_test_Yl6grfBbwpSDvh",
-                    "amount": response.total_price * 100,
+                    "amount": 1*100,//response.total_price * 100,
                     "currency": "INR",
                     "name": "Shopper Colorlib",
                     "description": "Thank you for choosing us",
