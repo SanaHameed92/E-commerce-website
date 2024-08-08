@@ -64,20 +64,25 @@
                     <td>${{ order.shipping_fee }}</td>
                     <td>${{ order.grand_total }}</td>
                     <td>
-                        {% if order.status == 'ordered' %}
-                            <span class="status-ordered">{{ order.status|capfirst }}</span>
-                        {% elif order.status == 'shipped' %}
-                            <span class="status-shipped">{{ order.status|capfirst }}</span>
-                        {% elif order.status == 'delivered' %}
-                            <span class="status-delivered">{{ order.status|capfirst }}</span>
-                        {% elif order.status == 'cancelled' %}
-                            <span class="status-cancelled">{{ order.status|capfirst }}</span>
+                        {% if order.status == 'Ordered' %}
+                            <span class="status-ordered">{{ order.status }}</span>
+                        {% elif order.status == 'Shipped' %}
+                            <span class="status-shipped">{{ order.status }}</span>
+                        {% elif order.status == 'Delivered' %}
+                            <span class="status-delivered">{{ order.status }}</span>
+                        {% elif order.status == 'Cancelled' %}
+                            <span class="status-cancelled">{{ order.status }}</span>
                         {% else %}
-                            {{ order.status|capfirst }}
+                            {{ order.status }}
                         {% endif %}
                     </td>
                     <td>
-                        <button class="btn btn-primary btn-sm update-status-btn" data-order-id="{{ order.id }}" data-current-status="{{ order.status }}">Update Status</button>
+                        <button class="btn btn-primary btn-sm update-status-btn" 
+                                data-order-id="{{ order.id }}" 
+                                data-current-status="{{ order.status }}"
+                                {% if order.status == 'Cancelled' %}disabled{% endif %}>
+                            Update Status
+                        </button>
                     </td>
                 </tr>
                 {% endfor %}
@@ -101,10 +106,10 @@
                             <div class="form-group">
                                 <label for="status">Select New Status</label>
                                 <select class="form-control" name="status" id="status">
-                                    <option value="ordered">Ordered</option>
-                                    <option value="shipped">Shipped</option>
-                                    <option value="delivered">Delivered</option>
-                                    <option value="cancelled">Cancelled</option>
+                                    <option value="Ordered">Ordered</option>
+                                    <option value="Shipped">Shipped</option>
+                                    <option value="Delivered">Delivered</option>
+                                    <option value="Cancelled">Cancelled</option>
                                 </select>
                             </div>
                             <button type="submit" class="btn btn-primary">Update Status</button>
@@ -124,6 +129,15 @@
                 $('#order_id').val(orderId);
                 $('#status').val(currentStatus);
                 $('#statusModal').modal('show');
+            });
+
+            // Disable button after form submission
+            $('#statusForm').on('submit', function(event) {
+                var newStatus = $('#status').val();
+                if (newStatus === 'Cancelled') {
+                    // Disable the button for the cancelled status
+                    $('.update-status-btn').prop('disabled', true);
+                }
             });
         });
     </script>

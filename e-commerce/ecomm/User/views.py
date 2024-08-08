@@ -13,6 +13,7 @@ from products.models import Order, Product
 from django.views.decorators.http import require_POST
 from django.db.models import Count
 from django.core.exceptions import MultipleObjectsReturned
+from wallet.models import WalletTransaction
 
 User = get_user_model()
 
@@ -144,7 +145,6 @@ def order_detail(request, order_number):
 
 def cancel_order(request, order_number):
     # Fetch the order for the current user
-    
     order = get_object_or_404(Order, order_number=order_number, user=request.user)
     
     # Check if the order is not already cancelled
@@ -158,14 +158,29 @@ def cancel_order(request, order_number):
             product.quantity += item.quantity
             product.save()
         
-        # Save the updated order status
-        order.save()
-
-        # Display a success message
-        messages.success(request, "Order cancelled successfully!",extra_tags='order')
+        # Process the refund if payment method is RazorPay
+        if order.payment_method == 'RazorPay':
+            user = request.user
+            user.wallet += order.grand_total
+            user.save()
+            order.wallet_credit = order.grand_total  # Record the amount credited
+            order.save()
+            
+            # Log the wallet transaction
+            WalletTransaction.objects.create(
+                user=user,
+                transaction_type='Credit',
+                amount=order.grand_total,
+                description=f'Refund for cancelled order {order.order_number}'
+            )
+            
+            messages.success(request, "Order cancelled successfully! Refund credited to wallet.", extra_tags='order')
+        else:
+            order.save()
+            messages.success(request, "Order cancelled successfully!", extra_tags='order')
     else:
         # If the order is already cancelled, display an info message
-        messages.info(request, "Order is already cancelled.",extra_tags='order')
+        messages.info(request, "Order is already cancelled.", extra_tags='order')
     
     # Redirect to the order detail or any other page you prefer
     return redirect('order_detail', order_number=order_number)
@@ -177,13 +192,13 @@ def order_list(request):
 
 @require_POST
 def update_order_status(request):
-    order_id = request.POST.get('order_id')
-    new_status = request.POST.get('status')
-    order = Order.objects.get(id=order_id)
-    order.status = new_status
-    order.save()
+    if request.method == 'POST':
+        order_id = request.POST.get('order_id')
+        new_status = request.POST.get('status')
+        order = get_object_or_404(Order, id=order_id)
+        order.status = new_status
+        order.save()
     return redirect('order_list')
-
 
 def add_to_wishlist(request, product_id):
     if not request.user.is_authenticated:

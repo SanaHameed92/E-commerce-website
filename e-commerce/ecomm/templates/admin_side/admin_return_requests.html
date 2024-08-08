@@ -1,0 +1,31 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<h2 class='text-center'>Return Requests</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Order Number</th>
+            <th>Reason</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for request in return_requests %}
+        <tr>
+            <td>{{ request.order.order_number }}</td>
+            <td>{{ request.reason }}</td>
+            <td>{{ request.get_status_display }}</td>
+            <td>
+                {% if request.status == 'Requested' %}
+                <a href="{% url 'admin_confirm_return' return_request_id=request.id %}" class="btn btn-success">Confirm</a>
+                <a href="{% url 'admin_reject_return' return_request_id=request.id %}" class="btn btn-danger">Reject</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
