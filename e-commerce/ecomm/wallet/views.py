@@ -1,10 +1,11 @@
 from django.shortcuts import render
-from . models import WalletTransaction
+from . models import Referral, WalletTransaction
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from .models import Order, ReturnRequest
 from django.db.models import F
 from django.db import transaction
+from django.contrib.auth.decorators import login_required
 
 # Create your views here.
 def my_wallet(request):
@@ -97,3 +98,15 @@ def admin_reject_return(request, return_request_id):
 def admin_return_requests(request):
     return_requests = ReturnRequest.objects.all()
     return render(request, 'admin_side/admin_return_requests.html', {'return_requests': return_requests})
+
+
+@login_required
+def referral_page(request):
+    referral = get_object_or_404(Referral, user=request.user)
+    friends = referral.referred_friends.all()
+
+    context = {
+        'referral_code': referral.referral_code,
+        'friends': friends,
+    }
+    return render(request, 'user/referral.html', context)
