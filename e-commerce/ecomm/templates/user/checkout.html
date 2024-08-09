@@ -24,7 +24,7 @@
             </div>
         </div>
 
-        <form method="post" action="#">
+        <form method="post" action="{% url 'product_page:checkout' %}" id="checkout-form">
             {% csrf_token %}
             <div class="row mb-5">
                 <div class="col-md-12">
@@ -53,6 +53,22 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Coupon Code Section -->
+                <div class="col-md-12 mb-5">
+                    <h2 class="text-black h4">Coupon Code</h2>
+                    <div class="form-group">
+                        <label for="coupon_code">Enter your coupon code</label>
+                        <div class="input-group">
+                            <input type="text" id="coupon_code" name="coupon_code" class="form-control" placeholder="Enter coupon code">
+                            <div class="input-group-append">
+                                <button type="button" class="btn btn-primary" onclick="applyCoupon()">Apply Coupon</button>
+                            </div>
+                        </div>
+                        <p id="coupon_message" class="text-danger mt-2"></p>
+                    </div>
+                </div>
+
                 <div class="col-md-12">
                     <h2 class="text-black h4">Order Summary</h2>
                     <table class="table table-bordered">
@@ -83,7 +99,9 @@
                             <span class="text-black">Subtotal</span>
                         </div>
                         <div class="col-md-6 text-right">
-                            <strong class="text-black">${{ total }}</strong>
+                            <strong class="text-black">$
+                                <span id="subtotal">{{ total }}</span>
+                            </strong>
                         </div>
                     </div>
                     <div class="row mb-3">
@@ -91,7 +109,19 @@
                             <span class="text-black">Shipping Fee</span>
                         </div>
                         <div class="col-md-6 text-right">
-                            <strong class="text-black">${{ shipping_fee }}</strong>
+                            <strong class="text-black">$
+                                <span id="shipping_fee">{{ shipping_fee }}</span>
+                            </strong>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <span class="text-black">Discount</span>
+                        </div>
+                        <div class="col-md-6 text-right">
+                            <strong class="text-black">
+                                <span id="discount_amount">$0.00</span>
+                            </strong>
                         </div>
                     </div>
                     <div class="row mb-5">
@@ -99,9 +129,12 @@
                             <span class="text-black">Total</span>
                         </div>
                         <div class="col-md-6 text-right">
-                            <strong class="text-black">${{ grand_total }}</strong>
+                            <strong class="text-black grand-total">
+                                <span id="grand_total">{{ grand_total }}</span>
+                            </strong>
                         </div>
                     </div>
+                   
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <span class="text-black">Estimated Delivery Date</span>
@@ -123,12 +156,9 @@
     </div>
 </div>
 
-
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="{% static 'js/checkout.js' %}"></script>
-
 <script>
     function togglePaymentButton(paymentMethod) {
         document.querySelectorAll('.payment-button').forEach(function(button) {
@@ -139,6 +169,45 @@
         } else if (paymentMethod === 'cod') {
             document.getElementById('payWithCOD').style.display = 'inline-block';
         }
+    }
+
+    function applyCoupon() {
+        var couponCode = document.getElementById('coupon_code').value;
+        var csrfToken = '{{ csrf_token }}';
+        $.ajax({
+            type: 'POST',
+            url: '{% url "product_page:checkout" %}',
+            data: {
+                'coupon_code': couponCode,
+                'csrfmiddlewaretoken': csrfToken
+            },
+            success: function(response) {
+                console.log("Response:", response); // Log the entire response object
+    
+                if (response.success) {
+                    $('#coupon_message').text(response.message);
+    
+                    // Ensure values are correctly formatted as numbers
+                    var newTotal = parseFloat(response.new_total);
+                    var discount = parseFloat(response.discount);
+    
+                    console.log("New Total:", newTotal); // Log new total
+                    console.log("Discount:", discount); // Log discount
+    
+                    $('#grand_total').text('$' + newTotal.toFixed(2));
+                    $('#applied_coupon').text(response.applied_coupon_code ? 'Coupon Code: ' + response.applied_coupon_code : '');
+                    $('#discount_amount').text(discount ? 'Discount Applied: $' + discount.toFixed(2) : 'Discount Applied: $0.00');
+                } else {
+                    $('#coupon_message').text(response.message);
+                    $('#discount_amount').text('Discount Applied: $0.00');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("AJAX Error:", status, error); // Log AJAX error details
+                $('#coupon_message').text("An error occurred. Please try again.");
+                $('#discount_amount').text('Discount Applied: $0.00');
+            }
+        });
     }
 </script>
 
