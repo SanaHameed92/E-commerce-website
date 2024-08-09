@@ -2,7 +2,6 @@
 {% load static %}
 
 {% block content %}
-
 <section class="vh-100 gradient-custom">
     <div class="container py-5 h-100">
         <div class="row justify-content-center align-items-center h-100">
@@ -13,7 +12,7 @@
                         <form action="{% url 'signup' %}" method="post">
                             {% csrf_token %}
                             {{ form.as_p }}
-                            
+                           
                             <div class="mt-4 pt-2">
                                 <input type="submit" class="btn btn-primary btn-lg" value="Sign Up">
                             </div>
@@ -27,5 +26,4 @@
         </div>
     </div>
 </section>
-
 {% endblock %}

@@ -1,3 +1,4 @@
+import decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout as auth_logout
 from django.contrib.auth import login as auth_login
@@ -16,7 +17,8 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator
 from .models import Account
-
+from wallet.models import Referral, WalletTransaction
+from decimal import Decimal
 
 
 def login_page(request):
@@ -78,19 +80,40 @@ def signup(request):
         form = SignupForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            user.set_password(form.cleaned_data['password'])  # Ensure password is hashed
+            user.set_password(form.cleaned_data['password'])
             user.is_active = False
             user.otp = generate_otp() 
             user.save()
-              # Save the user
 
+            # Process referral code
+            referral_code = form.cleaned_data.get('referral_code')
+            if referral_code:
+                referral = get_object_or_404(Referral, referral_code=referral_code)
+                # Award credits to both the referrer and the referee
+                user.wallet += Decimal('50.00')
+                user.save()
+
+                # Award credits to the referrer
+                referrer = referral.user
+                referrer.wallet += Decimal('5.00')
+                referrer.save()
+
+                # Log the transactions
+                WalletTransaction.objects.create(user=user, transaction_type='Credit', amount=Decimal('5.00'), description='Referral credit')
+                WalletTransaction.objects.create(user=referrer, transaction_type='Credit', amount=Decimal('5.00'), description='Referral bonus')
+
+                # Update the referrer’s referred friends list
+                referral.referred_friends.add(user)
+                referral.save()
+
+            # Create Referral object
+            Referral.objects.create(user=user)
+
+            # Send OTP email
             send_otp_email(user.email, user.otp)
            
             messages.success(request, 'OTP has been sent to your email address. Please verify.', extra_tags='otp')
-            return redirect('verify_otp', user_id=user.pk, scenario='signup')  # Redirect to the shop page after successful login
-            #else:
-                #messages.error(request, 'Account created but unable to log in. Please try logging in manually.')
-                #return redirect('login')  # Redirect to the login page if unable to log in automatically
+            return redirect('verify_otp', user_id=user.pk, scenario='signup')
         else:
             for field, errors in form.errors.items():
                 for error in errors:

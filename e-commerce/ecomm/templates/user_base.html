@@ -103,7 +103,8 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">
+                        {% url 'referral' as referral_url %}
+                        <a class="nav-link {% if request.path == referral_url %}active{% endif %}" href="{{ referral_url }}">
                             <i class="fa fa-share-alt"></i>
                             Referral
                         </a>

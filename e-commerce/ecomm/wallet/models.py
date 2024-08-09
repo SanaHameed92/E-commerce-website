@@ -1,3 +1,6 @@
+import random
+import string
+from django.conf import settings
 from django.db import models
 from accounts.models import Account
 from products.models import Order
@@ -29,3 +32,29 @@ class ReturnRequest(models.Model):
 
     def __str__(self):
         return f'Return Request for Order {self.order.order_number}'
+    
+
+class Referral(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    referral_code = models.CharField(max_length=50, unique=True)
+    referred_friends = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='referred_by', blank=True)
+
+    def __str__(self):
+        return f"{self.user.username}'s Referral Code: {self.referral_code}"
+    
+    def save(self, *args, **kwargs):
+        if not self.referral_code:
+            self.referral_code = self.generate_referral_code()
+        super().save(*args, **kwargs)
+
+    def generate_referral_code(self):
+        # Ensure the referral code is unique
+        while True:
+            # Get the first 4 characters of the username (or any identifier)
+            username_part = self.user.username[:4].upper()
+            # Generate a 4-digit random number
+            random_part = ''.join(random.choices(string.digits, k=4))
+            # Combine parts
+            code = f"{username_part}{random_part}"
+            if not Referral.objects.filter(referral_code=code).exists():
+                return code

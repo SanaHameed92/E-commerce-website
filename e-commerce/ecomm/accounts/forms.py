@@ -4,7 +4,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import get_user_model,authenticate
 from .models import Account
 from django.core.validators import RegexValidator
-from products.models import Product, Category
+from wallet.models import Referral
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 
 
@@ -47,6 +47,9 @@ class SignupForm(forms.ModelForm):
     phone_number = forms.CharField(
         validators=[RegexValidator(regex=r'^\d{10}$', message="Phone number must be a 10-digit number.")]
     )
+
+    referral_code = forms.CharField(required=False, label='Referral Code')
+
 
     class Meta:
         model = Account
@@ -109,6 +112,13 @@ class SignupForm(forms.ModelForm):
         if password and password2 and password != password2:
             raise forms.ValidationError("Passwords do not match.")
         return cleaned_data
+    
+    def clean_referral_code(self):
+        referral_code = self.cleaned_data.get('referral_code')
+        if referral_code:
+            if not Referral.objects.filter(referral_code=referral_code).exists():
+                raise forms.ValidationError("Invalid referral code.")
+        return referral_code
 
     def save(self, commit=True):
         user = super(SignupForm, self).save(commit=False)
