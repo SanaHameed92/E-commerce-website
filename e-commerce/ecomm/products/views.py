@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from django.utils import timezone
 import uuid
 from django.shortcuts import render, get_object_or_404
 from .models import Cart, CartItem, Coupon, Order, OrderItem, Product, Category, Brand, ProductVariant, Size, Color
@@ -239,20 +240,58 @@ def checkout(request):
     cart, created = Cart.objects.get_or_create(user=request.user)
     cart_items = CartItem.objects.filter(cart=cart)
 
+    # Calculate total and shipping fee
     total = sum(item.total_price for item in cart_items)
     shipping_fee = 50 if total <= 350 else 0
-    grand_total = total + shipping_fee
 
+    # Initialize variables for coupon code processing
+    coupon_code = request.POST.get('coupon_code', '').strip()
+    discount = 0
+    message = "Coupon code applied successfully."
+    success = True
+    applied_coupon_code = None
+
+    if coupon_code:
+        try:
+            coupon = Coupon.objects.get(code=coupon_code)
+            coupon.update_status()  # Make sure this method updates coupon status
+            if coupon.status == 'active':
+                discount = coupon.discount
+                applied_coupon_code = coupon_code
+            else:
+                message = "Invalid or expired coupon code."
+                success = False
+        except Coupon.DoesNotExist:
+            message = "Coupon code does not exist."
+            success = False
+
+    # Calculate the discount amount based on the percentage
+    discount_amount = (total * discount / 100)
+    grand_total = total + shipping_fee - discount_amount
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        response_data = {
+            'success': success,
+            'message': message,
+            'new_total': grand_total,  # Ensure this is a number
+            'applied_coupon_code': applied_coupon_code,
+            'discount': discount
+        }
+        return JsonResponse(response_data)
+    
+    # Calculate estimated delivery date
     delivery_days = 5
-    estimated_delivery_date = datetime.now() + timedelta(days=delivery_days)
+    estimated_delivery_date = timezone.now() + timedelta(days=delivery_days)
     formatted_delivery_date = estimated_delivery_date.strftime('%d %b %Y')
 
+    # Retrieve addresses for the user
     addresses = Address.objects.filter(user=request.user).order_by('-is_default', '-created_at')
 
     if request.method == 'POST':
         address_id = request.POST.get('selected_address')
         payment_method = request.POST.get('payment_method')
 
+        # Validate address and payment method
         if not address_id:
             messages.error(request, "Please select a shipping address.")
             return redirect('product_page:checkout')
@@ -272,6 +311,7 @@ def checkout(request):
                               f"{selected_address.state}, {selected_address.country}, "
                               f"{selected_address.postal_code}")
 
+        # Store data in session
         cart_items_data = [
             {
                 'title': item.product.title,
@@ -290,6 +330,7 @@ def checkout(request):
         }
         request.session['estimated_delivery_date'] = formatted_delivery_date
 
+        # Redirect based on payment method
         if payment_method == 'RazorPay':
             return redirect('product_page:razorpaycheck')
         elif payment_method == 'COD':
@@ -309,6 +350,7 @@ def checkout(request):
 
     return render(request, 'user/checkout.html', context)
 
+
 def order_summary(request):
     cart_items = request.session.get('cart_items', [])
     total = request.session.get('total', 0)
@@ -319,6 +361,7 @@ def order_summary(request):
     # Extract address details
     formatted_address = selected_address.get('address', 'No address selected')
     payment_method = selected_address.get('payment_method', 'Not Provided')
+    
 
     context = {
         'cart_items': cart_items,
@@ -513,13 +556,14 @@ def delete_product_variant(request, pk):
 
 def razorpaycheck(request):
     cart = Cart.objects.filter(user=request.user).first()
-    
     total_price = sum(item.total_price for item in CartItem.objects.filter(cart=cart))
     shipping_fee = 50 if total_price <= 350 else 0  # Example shipping fee, replace with your actual logic
     grand_total = total_price + shipping_fee
     
+    
     # You can decide on how to get the address_id, for simplicity, I'm using the first address
     address = Address.objects.filter(user=request.user).first()
+    
     
     if not address:
         return JsonResponse({'error': 'No address found for the user'}, status=400)
