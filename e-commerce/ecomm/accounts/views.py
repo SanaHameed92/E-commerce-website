@@ -286,6 +286,39 @@ def add_product(request):
     return render(request, 'admin_side/add_products.html', {'product_form': product_form})
 
 
+def edit_category(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+
+    if request.method == 'POST':
+        form = CategoryForm(request.POST, instance=category)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Category updated successfully.', extra_tags='product_update')
+            return redirect('admin_products')
+        else:
+            messages.error(request, 'Please correct the errors below.', extra_tags='product_update')
+    else:
+        form = CategoryForm(instance=category)
+
+    return render(request, 'admin_side/edit_category.html', {'form': form, 'category': category})
+
+def edit_brand(request, pk):
+    brand = get_object_or_404(Brand, pk=pk)
+
+    if request.method == 'POST':
+        form = BrandForm(request.POST, instance=brand)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Brand updated successfully.', extra_tags='product_update')
+            return redirect('admin_products')
+        else:
+            messages.error(request, 'Please correct the errors below.', extra_tags='product_update')
+    else:
+        form = BrandForm(instance=brand)
+
+    return render(request, 'admin_side/edit_brand.html', {'form': form, 'brand': brand})
+
+
 UserModel = get_user_model()
 
 def forgot_password(request):

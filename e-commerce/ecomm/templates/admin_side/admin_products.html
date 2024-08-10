@@ -13,7 +13,7 @@
 {% endif %}
 <div class="container mt-5">
     <div class="row tm-content-row">
-        <div class="col-sm-12 col-md-12 col-lg-8 col-xl-8 tm-block-col">
+        <div class="col-sm-12 col-md-12 col-lg-12 col-xl-12 tm-block-col">
             <div class="tm-bg-primary-dark tm-block tm-block-products">
                 <div class="tm-product-table-container">
                     <h2 class="tm-block-title">Product List</h2>
@@ -22,6 +22,7 @@
                             <tr>
                                 <th scope="col">PRODUCT TITLE</th>
                                 <th scope="col">ORIGINAL PRICE</th>
+                                <th scope="col">OFFER</th> 
                                 <th scope="col">CATEGORY</th>
                                 <th scope="col">BRAND</th>
                                 <th scope="col">ACTIONS</th>
@@ -34,16 +35,15 @@
                             <tr>
                                 <td class="tm-product-name">{{ product.title }}</td>
                                 <td>{{ product.original_price }}</td>
-                               
+                                <td>{{ product.product_offer }}%</td> 
                                 <td>{{ product.category }}</td>
                                 <td>{{ product.brand }}</td>
-                                
                                 <td>
                                     <a href="{% url 'edit_product' product.pk %}" class="btn btn-primary">
                                         Edit
                                     </a>
-                                  </td>
-                                  <td>
+                                </td>
+                                <td>
                                     {% if product.availability_status == 'in_stock' %}
                                         <span class="text-success">In Stock</span>
                                     {% else %}
@@ -65,15 +65,28 @@
             </div>
         </div>
     
-        <div class="col-sm-12 col-md-12 col-lg-4 col-xl-4 tm-block-col">
+       
+    </div>
+    
+    <div class="row tm-content-row">
+        <div class="col-sm-12 col-md-12 col-lg-6 col-xl-6 tm-block-col">
             <div class="tm-bg-primary-dark tm-block tm-block-product-categories">
                 <h2 class="tm-block-title">Product Categories</h2>
                 <div class="tm-product-table-container">
                     <table class="table tm-table-small tm-product-table text-white">
+                        <thead>
+                            <tr>
+                                <th>Category Name</th>
+                                <th>Offer (%)</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             {% for category in categories %}
                             <tr>
                                 <td>{{ category.category_name }}</td>
+                                <td>{{ category.category_offer }}%</td>
                                 <td>
                                     {% if category.is_active %}
                                         <span class="text-success">Active</span>
@@ -82,14 +95,13 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <form method="post" action="{% url 'delete_category' category.pk %}">
+                                    <a href="{% url 'edit_category' category.pk %}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form method="post" action="{% url 'delete_category' category.pk %}" style="display:inline;">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn btn-warning btn-sm">
-                                            {% if category.is_active %}
-                                                Deactivate
-                                            {% else %}
-                                                Activate
-                                            {% endif %}
+                                        <button type="submit" class="btn btn-danger btn-sm">
+                                            <i class="fas fa-times"></i>
                                         </button>
                                     </form>
                                 </td>
@@ -106,17 +118,24 @@
                 </form>
             </div>
         </div>
-    </div>
-    <div class="row tm-content-row">
-        <div class="col-sm-12 col-md-12 col-lg-4 col-xl-6 tm-block-col">
+        <div class="col-sm-12 col-md-12 col-lg-6 col-xl-6 tm-block-col">
             <div class="tm-bg-primary-dark tm-block tm-block-product-categories">
                 <h2 class="tm-block-title">Product Brands</h2>
                 <div class="tm-product-table-container">
                     <table class="table tm-table-small tm-product-table text-white">
+                        <thead>
+                            <tr>
+                                <th>Brand Name</th>
+                                <th>Offer (%)</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             {% for brand in brands %}
                             <tr>
                                 <td class="tm-product-name">{{ brand.brand_name }}</td>
+                                <td>{{ brand.brand_offer }}%</td>
                                 <td>
                                     {% if brand.is_active %}
                                         <span class="text-success">Active</span>
@@ -125,14 +144,13 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <form method="post" action="{% url 'toggle_brand_status' brand.pk %}">
+                                    <a href="{% url 'edit_brand' brand.pk %}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form method="post" action="{% url 'toggle_brand_status' brand.pk %}" style="display:inline;">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn btn-warning btn-sm">
-                                            {% if brand.is_active %}
-                                                Deactivate
-                                            {% else %}
-                                                Activate
-                                            {% endif %}
+                                        <button type="submit" class="btn btn-danger btn-sm">
+                                            <i class="fas fa-times"></i>
                                         </button>
                                     </form>
                                 </td>
@@ -147,7 +165,6 @@
                     <button type="submit" class="btn btn-primary btn-block text-uppercase mb-3">Add new brand</button>
                 </form>
             </div>
-            
         </div>
     </div>
 

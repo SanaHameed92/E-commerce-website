@@ -63,6 +63,7 @@
                             <input type="text" id="coupon_code" name="coupon_code" class="form-control" placeholder="Enter coupon code">
                             <div class="input-group-append">
                                 <button type="button" class="btn btn-primary" onclick="applyCoupon()">Apply Coupon</button>
+                                <button type="button" class="btn btn-danger ml-2" onclick="removeCoupon()">Remove Coupon</button>
                             </div>
                         </div>
                         <p id="coupon_message" class="text-danger mt-2"></p>
@@ -86,9 +87,9 @@
                                 <td class="product-name">
                                     <h2 class="h5 text-black">{{ item.product.title }}</h2>
                                 </td>
-                                <td>${{ item.product.original_price }}</td>
+                                <td>${{ item.product.offer_price|floatformat:2 }}</td>
                                 <td>{{ item.quantity }}</td>
-                                <td>${{ item.total_price }}</td>
+                                <td>${{ item.total_price|floatformat:2 }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -182,17 +183,13 @@
                 'csrfmiddlewaretoken': csrfToken
             },
             success: function(response) {
-                console.log("Response:", response); // Log the entire response object
+                console.log("Response:", response);
     
                 if (response.success) {
                     $('#coupon_message').text(response.message);
     
-                    // Ensure values are correctly formatted as numbers
                     var newTotal = parseFloat(response.new_total);
                     var discount = parseFloat(response.discount);
-    
-                    console.log("New Total:", newTotal); // Log new total
-                    console.log("Discount:", discount); // Log discount
     
                     $('#grand_total').text('$' + newTotal.toFixed(2));
                     $('#applied_coupon').text(response.applied_coupon_code ? 'Coupon Code: ' + response.applied_coupon_code : '');
@@ -203,7 +200,35 @@
                 }
             },
             error: function(xhr, status, error) {
-                console.error("AJAX Error:", status, error); // Log AJAX error details
+                console.error("AJAX Error:", status, error);
+                $('#coupon_message').text("An error occurred. Please try again.");
+                $('#discount_amount').text('Discount Applied: $0.00');
+            }
+        });
+    }
+
+    function removeCoupon() {
+        var csrfToken = '{{ csrf_token }}';
+        $.ajax({
+            type: 'POST',
+            url: '{% url "product_page:checkout" %}',
+            data: {
+                'remove_coupon': 'true',
+                'csrfmiddlewaretoken': csrfToken
+            },
+            success: function(response) {
+                console.log("Response:", response);
+    
+                if (response.success) {
+                    $('#coupon_message').text(response.message);
+                    $('#discount_amount').text('Discount Applied: $0.00');
+                    $('#grand_total').text('$' + parseFloat(response.new_total).toFixed(2));
+                } else {
+                    $('#coupon_message').text(response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("AJAX Error:", status, error);
                 $('#coupon_message').text("An error occurred. Please try again.");
                 $('#discount_amount').text('Discount Applied: $0.00');
             }

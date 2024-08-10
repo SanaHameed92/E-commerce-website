@@ -124,17 +124,17 @@ def shop_single(request, product_id):
     sizes = product.sizes.all()
     colors = product.colors.all()
 
-    # Display error message if any
-    product_error = messages.get_messages(request)
-    for message in product_error:
-        if 'shop-single' in message.tags:
-            messages.error(request, message.message)
+    # Calculate the offer price and the best offer
+    offer_price = product.offer_price
+    best_offer_percentage= product.get_best_offer()
 
     context = {
         'product': product,
         'featured_items': features_products,
         'sizes': sizes,
         'colors': colors,
+        'offer_price': offer_price,
+        'best_offer_percentage': best_offer_percentage,
         'availability_message': "Only 1 item left" if product.quantity == 1 else "",
     }
     return render(request, 'shop-single.html', context)
@@ -194,6 +194,8 @@ def cart(request):
     
     # Retrieve any product error message from the session
     product_error = request.session.pop('product_error', None)
+
+    
     
     context = {
         'cart_items': cart_items,
@@ -241,15 +243,20 @@ def checkout(request):
     cart_items = CartItem.objects.filter(cart=cart)
 
     # Calculate total and shipping fee
-    total = sum(item.total_price for item in cart_items)
+    total = sum(item.offer_price * item.quantity for item in cart_items)
     shipping_fee = 50 if total <= 350 else 0
 
     # Initialize variables for coupon code processing
     coupon_code = request.POST.get('coupon_code', '').strip()
+    remove_coupon = request.POST.get('remove_coupon', '') == 'true'
     discount = 0
+    discount_amount = 0
     message = "Coupon code applied successfully."
     success = True
     applied_coupon_code = None
+
+    if remove_coupon:
+        coupon_code = None  # If removing coupon, clear the code
 
     if coupon_code:
         try:
@@ -257,6 +264,7 @@ def checkout(request):
             coupon.update_status()  # Make sure this method updates coupon status
             if coupon.status == 'active':
                 discount = coupon.discount
+                discount_amount = (total * discount / 100)
                 applied_coupon_code = coupon_code
             else:
                 message = "Invalid or expired coupon code."
@@ -265,20 +273,24 @@ def checkout(request):
             message = "Coupon code does not exist."
             success = False
 
-    # Calculate the discount amount based on the percentage
-    discount_amount = (total * discount / 100)
+    if remove_coupon:
+        discount_amount = 0
+        message = "Coupon removed successfully."
+
     grand_total = total + shipping_fee - discount_amount
 
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         response_data = {
             'success': success,
             'message': message,
-            'new_total': grand_total,  # Ensure this is a number
+            'new_total': grand_total,
+            'shipping_fee': shipping_fee,
+            'discount_amount': discount_amount,
             'applied_coupon_code': applied_coupon_code,
             'discount': discount
         }
         return JsonResponse(response_data)
-    
+
     # Calculate estimated delivery date
     delivery_days = 5
     estimated_delivery_date = timezone.now() + timedelta(days=delivery_days)
@@ -349,6 +361,7 @@ def checkout(request):
     }
 
     return render(request, 'user/checkout.html', context)
+
 
 
 def order_summary(request):

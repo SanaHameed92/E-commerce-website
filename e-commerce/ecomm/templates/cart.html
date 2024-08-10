@@ -80,13 +80,14 @@
                                 </td>
                                 <td class="product-size">{{ item.size }}</td>
                                 <td class="product-color">{{ item.color }}</td>
-                                <td class="product-price">${{ item.product.original_price }}</td>
+                                <td class="product-price">${{ item.offer_price|floatformat:2 }}</td>
                                 <td>
                                     <div class="input-group mb-3" style="max-width: 120px;">
                                         <input type="number" class="form-control quantity-input" data-item-id="{{ item.id }}" value="{{ item.quantity }}" min="1">
                                     </div>
                                 </td>
-                                <td>${{ item.total_price }}</td>
+                                <td>${{ item.total_price|floatformat:2 }}</td>
+                                
                                 <td>
                                     <a href="{% url 'product_page:remove_from_cart' item.id %}" class="btn btn-primary btn-sm">X</a>
                                 </td>
@@ -119,7 +120,7 @@
                                 <span class="text-black">Subtotal</span>
                             </div>
                             <div class="col-md-6 text-right">
-                                <strong class="text-black">${{ total }}</strong>
+                                <strong class="text-black">${{ total|floatformat:2 }}</strong>
                             </div>
                         </div>
                         <div class="row mb-5">
@@ -127,7 +128,7 @@
                                 <span class="text-black">Total</span>
                             </div>
                             <div class="col-md-6 text-right">
-                                <strong class="text-black">${{ total }}</strong>
+                                <strong class="text-black">${{ total|floatformat:2 }}</strong>
                             </div>
                         </div>
 

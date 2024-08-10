@@ -6,7 +6,9 @@
 <div class="bg-light py-3">
     <div class="container">
         <div class="row">
-            <div class="col-md-12 mb-0"><a href="{% url 'main_page:home' %}">Home</a> <span class="mx-2 mb-0">/</span> <strong class="text-black">Shop</strong></div>
+            <div class="col-md-12 mb-0">
+                <a href="{% url 'main_page:home' %}">Home</a> <span class="mx-2 mb-0">/</span> <strong class="text-black">Shop</strong>
+            </div>
         </div>
     </div>
 </div>
@@ -31,24 +33,23 @@
                                   <a class="dropdown-item" href="{% url 'product_page:shop' %}?category=Boys">Boys</a>
                                   <a class="dropdown-item" href="{% url 'product_page:shop' %}?category=Girls">Girls</a>
                                 </div>
-                              </div>
-                              <div class="btn-group">
+                            </div>
+                            <div class="btn-group">
                                 <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" id="dropdownMenuReference" data-toggle="dropdown">Reference</button>
                                 <div class="dropdown-menu" aria-labelledby="dropdownMenuReference">
                                   <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=popularity">Popularity</a>
                                   <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=a_z">Name, A to Z</a>
                                   <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=z_a">Name, Z to A</a>
-                                  <a class="dropdown-item" href="#">Average Ratings</a>
+                                  <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=average_ratings">Average Ratings</a>
                                   <div class="dropdown-divider"></div>
                                   <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=price_low_high">Price, low to high</a>
                                   <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=price_high_low">Price, high to low</a>
                                 </div>
-                              </div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
-
                 {% if product_error %}
                 <div class="alert alert-danger">
                     {{ product_error.message }}
@@ -82,7 +83,19 @@
                                             {% endfor %}
                                         </div>
                                     </div>
-                                    <p class="text-primary font-weight-bold">${{ product.original_price }}</p>
+                                    {% if product.offer_price < product.original_price %}
+                                        <p class="text-muted">
+                                            <s class='text-danger'>${{ product.original_price }}</s>
+                                        </p>
+                                        <p class="text-primary font-weight-bold">
+                                            ${{ product.offer_price|floatformat:2 }}
+                                        </p>
+                                        <p class="text-success">
+                                            {{ product.get_best_offer }}% Off
+                                        </p>
+                                    {% else %}
+                                        <p class="text-primary font-weight-bold">${{ product.original_price }}</p>
+                                    {% endif %}
                                     {% if product.quantity == 1 %}
                                         <span style="color: red;">Only 1 item left in stock!</span>
                                     {% endif %}
@@ -189,9 +202,8 @@
                             <input type="number" name="max_price" placeholder="Max Price" value="{{ max_price }}" class="form-control">
                         </div>
 
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">Apply Filters</button>
-                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                        <a href="{% url 'product_page:shop' %}" class="btn btn-outline-secondary btn-sm">Clear All</a>
                     </div>
                 </form>
             </div>
