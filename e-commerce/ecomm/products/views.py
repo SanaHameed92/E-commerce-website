@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from decimal import Decimal
 from django.utils import timezone
 import uuid
 from django.shortcuts import render, get_object_or_404
@@ -11,7 +12,7 @@ from django.contrib import messages
 from User.models import Address
 from django.db.models import Count
 from .forms import CouponForm, ProductVariantForm
-import razorpay
+from wallet.models import Referral
 
 
 
@@ -246,11 +247,13 @@ def checkout(request):
     total = sum(item.offer_price * item.quantity for item in cart_items)
     shipping_fee = 50 if total <= 350 else 0
 
-    # Initialize variables for coupon code processing
+    # Initialize variables for coupon and referral code processing
     coupon_code = request.POST.get('coupon_code', '').strip()
+    referral_code = request.POST.get('referral_code', '').strip()
     remove_coupon = request.POST.get('remove_coupon', '') == 'true'
-    discount = 0
-    discount_amount = 0
+    discount = Decimal('0.00')
+    discount_amount = Decimal('0.00')
+    referral_discount_amount = Decimal('0.00')
     message = "Coupon code applied successfully."
     success = True
     applied_coupon_code = None
@@ -258,6 +261,7 @@ def checkout(request):
     if remove_coupon:
         coupon_code = None  # If removing coupon, clear the code
 
+    # Handle coupon code
     if coupon_code:
         try:
             coupon = Coupon.objects.get(code=coupon_code)
@@ -274,10 +278,20 @@ def checkout(request):
             success = False
 
     if remove_coupon:
-        discount_amount = 0
+        discount_amount = Decimal('0.00')
         message = "Coupon removed successfully."
 
-    grand_total = total + shipping_fee - discount_amount
+    # Handle referral code
+    if referral_code:
+        try:
+            referral = Referral.objects.get(referral_code=referral_code)
+            if referral:
+                referral_discount_amount = Decimal('50.00')  # Assuming a fixed 50% discount for referrals
+        except Referral.DoesNotExist:
+            message = "Invalid referral code."
+            success = False
+
+    grand_total = total + shipping_fee - discount_amount - (total * referral_discount_amount / 100)
 
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         response_data = {
@@ -286,6 +300,7 @@ def checkout(request):
             'new_total': grand_total,
             'shipping_fee': shipping_fee,
             'discount_amount': discount_amount,
+            'referral_discount_amount': referral_discount_amount,
             'applied_coupon_code': applied_coupon_code,
             'discount': discount
         }
@@ -358,6 +373,7 @@ def checkout(request):
         'grand_total': grand_total,
         'addresses': addresses,
         'formatted_delivery_date': formatted_delivery_date,
+        'referral_discount_amount': referral_discount_amount,  # Pass the referral discount amount to the template
     }
 
     return render(request, 'user/checkout.html', context)

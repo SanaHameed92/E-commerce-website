@@ -70,6 +70,21 @@
                     </div>
                 </div>
 
+                <!-- Referral Code Section -->
+                <div class="col-md-12 mb-5">
+                    <h2 class="text-black h4">Referral Code</h2>
+                    <div class="form-group">
+                        <label for="referral_code">Enter your referral code</label>
+                        <div class="input-group">
+                            <input type="text" id="referral_code" name="referral_code" class="form-control" placeholder="Enter referral code">
+                            <div class="input-group-append">
+                                <button type="button" class="btn btn-primary" onclick="applyReferral()">Apply Referral</button>
+                            </div>
+                        </div>
+                        <p id="referral_message" class="text-success mt-2"></p>
+                    </div>
+                </div>
+
                 <div class="col-md-12">
                     <h2 class="text-black h4">Order Summary</h2>
                     <table class="table table-bordered">
@@ -122,6 +137,16 @@
                         <div class="col-md-6 text-right">
                             <strong class="text-black">
                                 <span id="discount_amount">$0.00</span>
+                            </strong>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <span class="text-black">Referral Discount</span>
+                        </div>
+                        <div class="col-md-6 text-right">
+                            <strong class="text-black">
+                                <span id="referral_discount">$0.00</span>
                             </strong>
                         </div>
                     </div>
@@ -231,6 +256,40 @@
                 console.error("AJAX Error:", status, error);
                 $('#coupon_message').text("An error occurred. Please try again.");
                 $('#discount_amount').text('Discount Applied: $0.00');
+            }
+        });
+    }
+
+    function applyReferral() {
+        var referralCode = document.getElementById('referral_code').value;
+        var csrfToken = '{{ csrf_token }}';
+        $.ajax({
+            type: 'POST',
+            url: '{% url "product_page:checkout" %}',
+            data: {
+                'referral_code': referralCode,
+                'csrfmiddlewaretoken': csrfToken
+            },
+            success: function(response) {
+                console.log("Response:", response);
+
+                if (response.success) {
+                    $('#referral_message').text("Referral applied successfully.");
+                    
+                    var newTotal = parseFloat(response.new_total);
+                    var referralDiscount = parseFloat(response.referral_discount_amount);
+
+                    $('#grand_total').text('$' + newTotal.toFixed(2));
+                    $('#referral_discount').text('Referral Discount Applied: $' + referralDiscount.toFixed(2));
+                } else {
+                    $('#referral_message').text(response.message);
+                    $('#referral_discount').text('Referral Discount Applied: $0.00');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("AJAX Error:", status, error);
+                $('#referral_message').text("An error occurred. Please try again.");
+                $('#referral_discount').text('Referral Discount Applied: $0.00');
             }
         });
     }
