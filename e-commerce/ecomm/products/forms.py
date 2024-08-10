@@ -20,9 +20,9 @@ class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
         fields = [
-            'title', 'description', 'category', 'original_price', 'rating', 'brand',
+            'title', 'description', 'category', 'original_price','product_offer', 'rating', 'brand',
             'quantity','max_qty_per_person', 'trending', 'product_image','availability_status','sizes','colors','featured',
-            'popularity',
+            
         ]
 
 
@@ -30,12 +30,12 @@ class ProductForm(forms.ModelForm):
 class CategoryForm(forms.ModelForm):
     class Meta:
         model = Category
-        fields = ['category_name','is_active']
+        fields = ['category_name','category_offer','is_active']
 
 class BrandForm(forms.ModelForm):
     class Meta:
         model = Brand
-        fields = ['brand_name',]
+        fields = ['brand_name','brand_offer']
 
 class SizeForm(forms.ModelForm):
     class Meta:

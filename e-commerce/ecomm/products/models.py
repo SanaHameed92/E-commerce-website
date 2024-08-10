@@ -14,6 +14,7 @@ class Category(models.Model):
     description = models.TextField(max_length=255, blank=True)
     cat_image = models.ImageField(upload_to='photos/categories', blank=True)
     is_active = models.BooleanField(default=True)
+    category_offer = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, help_text=_('Discount percentage applied to all products under this category'))
 
     class Meta:
         verbose_name = 'category'
@@ -26,6 +27,7 @@ class Brand(models.Model):
     brand_name = models.CharField(max_length=255)   
     category = models.ManyToManyField(Category, related_name='brands')
     is_active = models.BooleanField(default=True)
+    brand_offer = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, help_text=_('Discount percentage applied to all products under this brand'))
 
     def __str__(self):
         return self.brand_name
@@ -72,6 +74,7 @@ class Product(models.Model):
     popularity = models.IntegerField(default=0)
     sizes = models.ManyToManyField(Size, blank=True)
     colors = models.ManyToManyField(Color, blank=True)
+    product_offer = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, help_text=_('Discount percentage applied to the product'))
     
     
 
@@ -80,6 +83,26 @@ class Product(models.Model):
 
     def __str__(self):
         return self.title
+    
+    @property
+    def offer_price(self):
+        category_offer = self.category.category_offer if self.category else 0
+        brand_offer = self.brand.brand_offer if self.brand else 0
+        final_discount = max(self.product_offer, brand_offer,category_offer)
+        return self.original_price * (1 - (final_discount / 100))
+    
+    def get_best_offer(self):
+        
+        category_offer = self.category.category_offer if self.category else 0
+        brand_offer = self.brand.brand_offer if self.brand else 0
+        offers = {
+            'product_offer': self.product_offer,
+            'category_offer': category_offer,
+            'brand_offer': brand_offer
+        }
+        best_offer_type = max(offers, key=offers.get)
+        best_offer_percentage = offers[best_offer_type]
+        return best_offer_percentage
 
     @property
     def main_image(self):
@@ -166,8 +189,12 @@ class CartItem(models.Model):
     
 
     @property
+    def offer_price(self):
+        return self.product.offer_price
+
+    @property
     def total_price(self):
-        return self.product.original_price * self.quantity
+        return self.offer_price * self.quantity
     
 
 

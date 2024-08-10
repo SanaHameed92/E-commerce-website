@@ -16,7 +16,7 @@ admin.site.register(OrderItem)
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('title', 'category', 'brand', 'quantity', 'original_price', 'in_stock', 'trending', 'rating', 'created_at', 'updated_at')
+    list_display = ('title', 'category', 'brand', 'quantity', 'original_price','product_offer', 'in_stock', 'trending', 'rating', 'created_at', 'updated_at')
     list_filter = ('category', 'brand', 'in_stock', 'trending')
     search_fields = ('title', 'category__category_name', 'brand__brand_name')
     raw_id_fields = ('category', 'brand')
@@ -24,13 +24,13 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ('category_name', 'is_active')
+    list_display = ('category_name','category_offer' ,'is_active')
     search_fields = ('category_name',)
     list_filter = ('is_active',)
 
 @admin.register(Brand)
 class BrandAdmin(admin.ModelAdmin):
-    list_display = ('brand_name', 'is_active')
+    list_display = ('brand_name','brand_offer', 'is_active')
     search_fields = ('brand_name',)
     list_filter = ('is_active',)
     filter_horizontal = ('category',)

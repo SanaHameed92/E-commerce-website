@@ -126,7 +126,11 @@
                         {% endfor %}
                     </div>
                 </div>
-                <p><strong class="text-primary h4">{{ product.original_price }}</strong></p>
+                <p><strong class="text-primary h4">{{ offer_price|floatformat:2 }}</strong></p>
+                    {% if best_offer_percentage > 0 %}
+                        <p class='text-danger'><medium>Original Price: <del>${{ product.original_price|floatformat:2 }}</del></medium></p>
+                        <p class='text-success'><medium>Best Offer: {{ best_offer_percentage }}% off</medium></p>
+                    {% endif %}
 
                 <!-- Display Flash Messages -->
                 {% if messages_for_shop %}
