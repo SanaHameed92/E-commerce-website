@@ -95,12 +95,12 @@ def signup(request):
 
                 # Award credits to the referrer
                 referrer = referral.user
-                referrer.wallet += Decimal('5.00')
+                referrer.wallet += Decimal('50.00')
                 referrer.save()
 
                 # Log the transactions
-                WalletTransaction.objects.create(user=user, transaction_type='Credit', amount=Decimal('5.00'), description='Referral credit')
-                WalletTransaction.objects.create(user=referrer, transaction_type='Credit', amount=Decimal('5.00'), description='Referral bonus')
+                WalletTransaction.objects.create(user=user, transaction_type='Credit', amount=Decimal('50.00'), description='Referral credit')
+                WalletTransaction.objects.create(user=referrer, transaction_type='Credit', amount=Decimal('50.00'), description='Referral bonus')
 
                 # Update the referrer’s referred friends list
                 referral.referred_friends.add(user)

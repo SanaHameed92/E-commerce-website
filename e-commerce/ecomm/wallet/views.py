@@ -13,7 +13,7 @@ def my_wallet(request):
     transactions = WalletTransaction.objects.filter(user=user).order_by('-created_at')
     
     context = {
-        'wallet_balance': user.wallet,  # Assuming `wallet` is a field on your `Account` model
+        'wallet_balance': user.wallet,  
         'transactions': transactions,
     }
     

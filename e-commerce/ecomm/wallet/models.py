@@ -1,3 +1,4 @@
+from decimal import Decimal
 import random
 import string
 from django.conf import settings
@@ -38,6 +39,8 @@ class Referral(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     referral_code = models.CharField(max_length=50, unique=True)
     referred_friends = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='referred_by', blank=True)
+    referral_discount = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('50.00'))
+    
 
     def __str__(self):
         return f"{self.user.username}'s Referral Code: {self.referral_code}"
