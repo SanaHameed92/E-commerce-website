@@ -1,0 +1,262 @@
+from django.shortcuts import render
+import pandas as pd
+from products.models import Coupon, Order
+from django.db.models import Sum, F
+from django.utils import timezone
+from datetime import timedelta
+from io import BytesIO
+from django.http import HttpResponse
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib.styles import getSampleStyleSheet
+from django.utils.timezone import make_naive
+
+def sale_report_view(request):
+    filter_option = request.GET.get('filter', 'all')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    # Date filters
+    if filter_option == 'all':
+        orders = Order.objects.all()
+    elif filter_option == 'today':
+        today = timezone.now().date()
+        orders = Order.objects.filter(created_at__date=today)
+    elif filter_option == 'weekly':
+        start_of_week = timezone.now().date() - timedelta(days=timezone.now().weekday())
+        orders = Order.objects.filter(created_at__date__gte=start_of_week)
+    elif filter_option == 'monthly':
+        start_of_month = timezone.now().date().replace(day=1)
+        orders = Order.objects.filter(created_at__date__gte=start_of_month)
+    elif filter_option == 'yearly':
+        start_of_year = timezone.now().date().replace(month=1, day=1)
+        orders = Order.objects.filter(created_at__date__gte=start_of_year)
+    elif filter_option == 'custom' and start_date and end_date:
+        orders = Order.objects.filter(created_at__date__range=[start_date, end_date])
+    else:
+        orders = Order.objects.all()  # Fallback to all time if invalid filter
+
+    overall_sales_count = orders.count()
+    overall_success_amount = orders.filter(status='Delivered').aggregate(Sum('grand_total'))['grand_total__sum'] or 0
+
+    # Calculate overall discount based on offer_price
+    discount_amount = 0
+    for order in orders:
+        for item in order.items.all():
+            original_price = item.product.original_price
+            offer_price = item.product.offer_price
+            discount_amount += (original_price - offer_price) * item.quantity
+
+    overall_discount = discount_amount
+
+    # Additional statistics
+    success_order_count = orders.filter(status='Delivered').count()
+    cancelled_order_count = orders.filter(status='Cancelled').count()
+    returned_order_count = orders.filter(return_request__isnull=False).count()
+    return_request_count = orders.filter(return_request__status='Requested').count()
+    in_progress_count = orders.filter(status='Ordered').count()
+
+    context = {
+        'orders': orders,
+        'overall_sales_count': overall_sales_count,
+        'overall_success_amount': overall_success_amount,
+        'overall_discount': overall_discount,
+        'success_order_count': success_order_count,
+        'cancelled_order_count': cancelled_order_count,
+        'returned_order_count': returned_order_count,
+        'return_request_count': return_request_count,
+        'in_progress_count': in_progress_count,
+    }
+    
+    return render(request, 'admin_side/sales_report.html', context)
+
+
+
+def pdf_report_view(request):
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    # Fetching filtered data
+    filter_option = request.GET.get('filter', 'all')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    if filter_option == 'all':
+        orders = Order.objects.all()
+    elif filter_option == 'today':
+        today = timezone.now().date()
+        orders = Order.objects.filter(created_at__date=today)
+    elif filter_option == 'weekly':
+        start_of_week = timezone.now().date() - timedelta(days=timezone.now().weekday())
+        orders = Order.objects.filter(created_at__date__gte=start_of_week)
+    elif filter_option == 'monthly':
+        start_of_month = timezone.now().date().replace(day=1)
+        orders = Order.objects.filter(created_at__date__gte=start_of_month)
+    elif filter_option == 'yearly':
+        start_of_year = timezone.now().date().replace(month=1, day=1)
+        orders = Order.objects.filter(created_at__date__gte=start_of_year)
+    elif filter_option == 'custom' and start_date and end_date:
+        orders = Order.objects.filter(created_at__date__range=[start_date, end_date])
+    else:
+        orders = Order.objects.all()
+
+    # Calculate overall details
+    overall_sales_count = orders.count()
+    overall_success_amount = orders.filter(status='Delivered').aggregate(Sum('grand_total'))['grand_total__sum'] or 0
+    discount_amount = 0
+    for order in orders:
+        for item in order.items.all():
+            original_price = item.product.original_price
+            offer_price = item.product.offer_price
+            discount_amount += (original_price - offer_price) * item.quantity
+    overall_discount = discount_amount
+
+    success_order_count = orders.filter(status='Delivered').count()
+    cancelled_order_count = orders.filter(status='Cancelled').count()
+    returned_order_count = orders.filter(return_request__isnull=False).count()
+    return_request_count = orders.filter(return_request__status='Requested').count()
+    in_progress_count = orders.filter(status='Ordered').count()
+
+    # Set up styles
+    styles = getSampleStyleSheet()
+    title_style = styles['Title']
+    title_style.alignment = 1  # Center title
+    normal_style = styles['Normal']
+    
+    # Sales Details Title
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(230, height - 50, "Sales Report")
+
+    # Overall Sales Details
+    y_position = height - 80
+    p.setFont("Helvetica", 10)
+    p.drawString(40, y_position, f"Total Sales Count: {overall_sales_count}")
+    p.drawString(40, y_position - 15, f"Total Success Order Amount: ${overall_success_amount:.2f}")
+    p.drawString(40, y_position - 30, f"Total Discount Given: ${overall_discount:.2f}")
+    p.drawString(40, y_position - 45, f"Success Order Count: {success_order_count}")
+    p.drawString(40, y_position - 60, f"Cancelled Order Count: {cancelled_order_count}")
+    p.drawString(40, y_position - 75, f"Returned Order Count: {returned_order_count}")
+    p.drawString(40, y_position - 90, f"Return Request Count: {return_request_count}")
+    p.drawString(40, y_position - 105, f"In Progress Count: {in_progress_count}")
+
+    y_position -= 130  # Adjust position for the table
+
+    # Sales Report Table
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(40, y_position, "Sales Report Table")
+
+    y_position -= 20  # Adjust position for table headers
+
+    # Define column positions
+    col_positions = {
+        "id": 40,
+        "username": 80,
+        "order_date": 120,
+        "product_title": 180,
+        "og_price": 260,
+        "quantity": 320,
+        "discount": 380,
+        "total_amount": 440,
+        "sold_amt": 500,
+        "status": 560
+    }
+
+    # Table Headers
+    p.setFont("Helvetica-Bold", 8)
+    p.drawString(col_positions["id"], y_position, "ID")
+    p.drawString(col_positions["username"], y_position, "Username")
+    p.drawString(col_positions["order_date"], y_position, "Order Date")
+    p.drawString(col_positions["product_title"], y_position, "Product Title")
+    p.drawString(col_positions["og_price"], y_position, "OG Price")
+    p.drawString(col_positions["quantity"], y_position, "Quantity")
+    p.drawString(col_positions["discount"], y_position, "Discount")
+    p.drawString(col_positions["total_amount"], y_position, "Total")
+    p.drawString(col_positions["sold_amt"], y_position, "Sold Amt")
+    p.drawString(col_positions["status"], y_position, "Status")
+
+    y_position -= 20  # Adjust position for table rows
+
+    # Table Rows
+    p.setFont("Helvetica", 8)
+    row_height = 12  # Reduced row size
+    for order in orders:
+        for item in order.items.all():
+            p.drawString(col_positions["id"], y_position, str(item.id))
+            p.drawString(col_positions["username"], y_position, order.user.username)
+            p.drawString(col_positions["order_date"], y_position, order.created_at.strftime("%Y-%m-%d"))
+            p.drawString(col_positions["product_title"], y_position, item.product.title)
+            p.drawString(col_positions["og_price"], y_position, f"${item.product.original_price:.2f}")
+            p.drawString(col_positions["quantity"], y_position, str(item.quantity))
+            p.drawString(col_positions["discount"], y_position, f"{item.product.get_best_offer()}%")
+            p.drawString(col_positions["total_amount"], y_position, f"${order.grand_total:.2f}")
+            p.drawString(col_positions["sold_amt"], y_position, f"${item.total_price:.2f}")
+            p.drawString(col_positions["status"], y_position, order.payment_method)
+
+            y_position -= row_height
+
+            if y_position < 40:  # Check if we need to create a new page
+                p.showPage()
+                p.setFont("Helvetica", 8)
+                y_position = height - 40  # Reset position for new page
+
+    p.showPage()
+    p.save()
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="sales_report.pdf"'
+    return response
+
+
+
+def download_sales_report_excel(request):
+    # Filter orders based on the user's selected filter
+    filter_option = request.GET.get('filter', 'all')
+
+    if filter_option == 'today':
+        orders = Order.objects.filter(created_at__date=timezone.now().date())
+    elif filter_option == 'weekly':
+        start_of_week = timezone.now() - timedelta(days=timezone.now().weekday())
+        orders = Order.objects.filter(created_at__date__gte=start_of_week)
+    elif filter_option == 'monthly':
+        orders = Order.objects.filter(created_at__month=timezone.now().month)
+    elif filter_option == 'yearly':
+        orders = Order.objects.filter(created_at__year=timezone.now().year)
+    elif filter_option == 'custom':
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        if start_date and end_date:
+            orders = Order.objects.filter(created_at__date__range=[start_date, end_date])
+        else:
+            orders = Order.objects.all()
+    else:
+        orders = Order.objects.all()
+
+    # Prepare the data for the Excel file
+    data = []
+    for order in orders:
+        for item in order.items.all():
+            data.append({
+                'Order ID': order.id,
+                'Username': order.user.username,
+                'Product Title': item.product.title,
+                'Original Price': item.product.original_price,
+                'Sold Price': item.total_price,
+                'Quantity': item.quantity,
+                'Discount': item.product.get_best_offer(),
+                'Total Amount': order.grand_total,
+                'Status': order.status,
+                'Payment Method': order.payment_method,
+            })
+
+    # Create a DataFrame
+    df = pd.DataFrame(data)
+
+    # Create a response object and set the appropriate headers
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=sales_report.xlsx'
+
+    # Use pandas to write the DataFrame to the response
+    df.to_excel(response, index=False, engine='openpyxl')
+
+    return response

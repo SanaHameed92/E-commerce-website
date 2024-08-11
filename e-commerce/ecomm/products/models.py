@@ -126,78 +126,6 @@ class ProductImage(models.Model):
         return f"Image of {self.product.title}"
     
 
-class Order(models.Model):
-    STATUS_CHOICES = (
-        ('Ordered', 'Ordered'),
-        ('Shipped', 'Shipped'),
-        ('Delivered', 'Delivered'),
-        ('Cancelled', 'Cancelled'),
-        ('Returned', 'Returned'),
-    )
-
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    address = models.ForeignKey(Address, on_delete=models.CASCADE)
-    payment_method = models.CharField(max_length=50)
-    order_notes = models.TextField(blank=True, null=True)
-    total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
-    shipping_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    order_number = models.CharField(max_length=50, unique=True, default=uuid.uuid4().hex)
-    grand_total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Ordered')  # Added status field
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    payment_id = models.CharField(max_length=255, blank=True, null=True) 
-    wallet_credit = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), blank=True, null=True)
-
-    def save(self, *args, **kwargs):
-        if not self.order_number:
-            last_order = Order.objects.order_by('-id').first()
-            new_number = last_order.order_number + 1 if last_order else 1
-            self.order_number = str(new_number)
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f'Order {self.id} - {self.user.username}'
-
-class OrderItem(models.Model):
-    order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
-    product = models.ForeignKey('Product', on_delete=models.CASCADE)
-    quantity = models.PositiveIntegerField()
-    total_price = models.DecimalField(max_digits=10, decimal_places=2)
-
-    def __str__(self):
-        return f'{self.product.title} - {self.quantity}'
-    
-
-class Cart(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-    coupon = models.ForeignKey('Coupon', null=True, blank=True, on_delete=models.SET_NULL)
-
-    
-    
-
-
-class CartItem(models.Model):
-    cart = models.ForeignKey(Cart, on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    quantity = models.PositiveIntegerField(default=1)
-    added_at = models.DateTimeField(auto_now_add=True)
-    size = models.ForeignKey(Size, on_delete=models.CASCADE, null=True, blank=True)
-    color = models.ForeignKey(Color, on_delete=models.CASCADE, null=True, blank=True)
-    
-
-    @property
-    def offer_price(self):
-        return self.product.offer_price
-
-    @property
-    def total_price(self):
-        return self.offer_price * self.quantity
-    
-
-
 class Coupon(models.Model):
     STATUS_CHOICES = [
         ('active', 'Active'),
@@ -223,6 +151,83 @@ class Coupon(models.Model):
             self.status = 'inactive'
         else:
             self.status = 'expired'
+    
+
+class Order(models.Model):
+    STATUS_CHOICES = (
+        ('Ordered', 'Ordered'),
+        ('Shipped', 'Shipped'),
+        ('Delivered', 'Delivered'),
+        ('Cancelled', 'Cancelled'),
+        ('Returned', 'Returned'),
+    )
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    address = models.ForeignKey(Address, on_delete=models.CASCADE)
+    payment_method = models.CharField(max_length=50)
+    order_notes = models.TextField(blank=True, null=True)
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    shipping_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    order_number = models.CharField(max_length=50, unique=True, default=uuid.uuid4().hex)
+    grand_total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Ordered')  # Added status field
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    payment_id = models.CharField(max_length=255, blank=True, null=True) 
+    wallet_credit = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), blank=True, null=True)
+    coupon = models.ForeignKey(Coupon, null=True, blank=True, on_delete=models.SET_NULL)  
+   
+
+    def save(self, *args, **kwargs):
+        if not self.order_number:
+            last_order = Order.objects.order_by('-id').first()
+            new_number = last_order.order_number + 1 if last_order else 1
+            self.order_number = str(new_number)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'Order {self.id} - {self.user.username}'
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
+    product = models.ForeignKey('Product', on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField()
+    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f'{self.product.title} - {self.quantity}'
+    
+
+class Cart(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    coupon = models.ForeignKey(Coupon, null=True, blank=True, on_delete=models.SET_NULL)
+
+    
+    
+
+
+class CartItem(models.Model):
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+    added_at = models.DateTimeField(auto_now_add=True)
+    size = models.ForeignKey(Size, on_delete=models.CASCADE, null=True, blank=True)
+    color = models.ForeignKey(Color, on_delete=models.CASCADE, null=True, blank=True)
+    
+
+    @property
+    def offer_price(self):
+        return self.product.offer_price
+
+    @property
+    def total_price(self):
+        return self.offer_price * self.quantity
+    
+
+
+
         self.save(update_fields=['status'])
 
 class ProductVariant(models.Model):
