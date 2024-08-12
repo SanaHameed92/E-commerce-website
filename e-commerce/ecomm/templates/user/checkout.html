@@ -55,18 +55,36 @@
                 </div>
 
                 <!-- Coupon Code Section -->
-                <div class="col-md-12 mb-5">
-                    <h2 class="text-black h4">Coupon Code</h2>
-                    <div class="form-group">
-                        <label for="coupon_code">Enter your coupon code</label>
-                        <div class="input-group">
-                            <input type="text" id="coupon_code" name="coupon_code" class="form-control" placeholder="Enter coupon code">
-                            <div class="input-group-append">
-                                <button type="button" class="btn btn-primary" onclick="applyCoupon()">Apply Coupon</button>
-                                <button type="button" class="btn btn-danger ml-2" onclick="removeCoupon()">Remove Coupon</button>
+                 <div class = 'row '>
+                    <div class="col-md-8 mb-5">
+                        <h2 class="text-black h4">Coupon Code</h2>
+                        <div class="form-group">
+                            <label for="coupon_code">Enter your coupon code</label>
+                            <div class="input-group">
+                                <input type="text" id="coupon_code" name="coupon_code" class="form-control" placeholder="Enter coupon code">
+                                <div class="input-group-append">
+                                    <button type="button" class="btn btn-primary" onclick="applyCoupon()">Apply Coupon</button>
+                                    <button type="button" class="btn btn-danger ml-2" onclick="removeCoupon()">Remove Coupon</button>
+                                </div>
                             </div>
+                            <p id="coupon_message" class="text-danger mt-2"></p>
                         </div>
-                        <p id="coupon_message" class="text-danger mt-2"></p>
+                    </div>
+                    <div class="col-md-4">
+                        <h2 class="text-black h4">Available Coupons</h2>
+                        <div class="form-group">
+                            <label for="couponDropdown">Here's a list of available coupons</label>
+                            <select id="couponDropdown" name="coupon_code" class="form-control">
+                                <option value="{{ coupon.code }}" disabled selected>YOUR COUPONS</option>
+                                {% for coupon in coupons %}
+                                <option value="{{ coupon.code }}">
+                                    {{ coupon.code }} - {{ coupon.name }} ({{ coupon.discount }}% off, Valid From: {{ coupon.valid_from }}, Valid To: {{ coupon.valid_to }})
+                                </option>
+                                {% empty %}
+                                <option value="" disabled>No coupons available</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
                 </div>
 

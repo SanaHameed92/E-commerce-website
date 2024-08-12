@@ -13,54 +13,56 @@ from User.models import Address
 from django.db.models import Count
 from .forms import CouponForm, ProductVariantForm
 from wallet.models import Referral
-
+from django.db.models import Count, Q
 
 
 def shop(request):
-    category_name = request.GET.get('category')
-    brand_name = request.GET.get('brand')
-    color = request.GET.get('color')
+    search_query = request.GET.get('search', '')
+    category_names = request.GET.getlist('category')
+    brand_names = request.GET.getlist('brand')
+    colors = request.GET.getlist('color')
+    sizes = request.GET.getlist('size')
     sort = request.GET.get('sort')
-    size = request.GET.get('size')
     min_price = request.GET.get('min_price')
     max_price = request.GET.get('max_price')
     cart_items_count = CartItem.objects.filter(cart__user=request.user).count()
 
     product_list = Product.objects.all()
 
+    # Apply search filter
+    if search_query:
+        product_list = product_list.filter(Q(title__icontains=search_query) |
+                                           Q(description__icontains=search_query) |
+                                           Q(brand__brand_name__icontains=search_query)|
+                                           Q(category__category_name__icontains=search_query)|
+                                           Q(colors__color_name__icontains=search_query) |
+                                           Q(sizes__size_name__icontains=search_query)
+                                        ).distinct()
+
     # Apply category filter
-    if category_name:
-        product_list = product_list.filter(category__category_name=category_name)
+    if category_names:
+        product_list = product_list.filter(category__category_name__in=category_names)
 
     # Apply brand filter
-    if brand_name:
-        product_list = product_list.filter(brand__brand_name=brand_name)
+    if brand_names:
+        product_list = product_list.filter(brand__brand_name__in=brand_names)
 
     # Apply color filter
-    if color:
-        product_list = product_list.filter(colors__color_name=color)
+    if colors:
+        product_list = product_list.filter(colors__color_name__in=colors).distinct()
 
     # Apply size filter
-    if size:
-        try:
-            selected_size = Size.objects.get(size_name=size)
-            product_list = product_list.filter(sizes=selected_size)
-        except Size.DoesNotExist:
-            pass
+    if sizes:
+        product_list = product_list.filter(sizes__size_name__in=sizes).distinct()
 
     # Apply price range filter
-    if min_price:
-        try:
-            min_price = float(min_price)
-            product_list = product_list.filter(original_price__gte=min_price)
-        except ValueError:
-            pass
-    if max_price:
-        try:
-            max_price = float(max_price)
-            product_list = product_list.filter(original_price__lte=max_price)
-        except ValueError:
-            pass
+    try:
+        if min_price:
+            product_list = product_list.filter(original_price__gte=float(min_price))
+        if max_price:
+            product_list = product_list.filter(original_price__lte=float(max_price))
+    except ValueError:
+        pass
 
     # Annotate products with purchase counts
     product_list = product_list.annotate(cart_count=Count('cartitem'))
@@ -102,13 +104,14 @@ def shop(request):
         'brands': brands,
         'sizes': sizes,
         'colors': colors,
-        'selected_category': category_name,
-        'selected_brand': brand_name,
-        'selected_color': color,
-        'selected_size': size,
+        'selected_category': category_names,
+        'selected_brand': brand_names,
+        'selected_color': colors,
+        'selected_size': sizes,
         'selected_sort': sort,
         'min_price': min_price,
         'max_price': max_price,
+        'search_query': search_query,
         'cart_items_count': cart_items_count,
         'product_error': request.session.pop('product_error', None)
     }
@@ -242,7 +245,14 @@ def product_filter_by_color(request):
 def checkout(request):
     cart, created = Cart.objects.get_or_create(user=request.user)
     cart_items = CartItem.objects.filter(cart=cart)
+    today = timezone.now().date()
+    coupons = Coupon.objects.all()
+    for coupon in coupons:
+        coupon.update_status()
+        coupon.save()  # Save the coupon to apply the status update
 
+    # Fetch active coupons
+    active_coupons = Coupon.objects.filter(status='active', valid_from__lte=today, valid_to__gte=today)
     # Calculate total and shipping fee
     total = sum(item.offer_price * item.quantity for item in cart_items)
     shipping_fee = 50 if total <= 350 else 0
@@ -373,7 +383,8 @@ def checkout(request):
         'grand_total': grand_total,
         'addresses': addresses,
         'formatted_delivery_date': formatted_delivery_date,
-        'referral_discount_amount': referral_discount_amount,  # Pass the referral discount amount to the template
+        'referral_discount_amount': referral_discount_amount, 
+        'coupons': active_coupons,
     }
 
     return render(request, 'user/checkout.html', context)
