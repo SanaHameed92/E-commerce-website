@@ -204,6 +204,15 @@ class Cart(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     coupon = models.ForeignKey(Coupon, null=True, blank=True, on_delete=models.SET_NULL)
 
+    @property
+    def total_price(self):
+        total_price = sum(item.total_price for item in self.cartitem_set.all())
+        if self.coupon:
+            discount = self.coupon.discount
+            discount_amount = (total_price * discount) / Decimal('100.00')
+            total_price -= discount_amount
+        return total_price
+
     
     
 

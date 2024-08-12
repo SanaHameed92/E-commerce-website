@@ -79,7 +79,7 @@ def admin_confirm_return(request, return_request_id):
     else:
         messages.error(request, 'Return request cannot be confirmed.', extra_tags='order_detail')
 
-    return redirect('admin_side/admin_return_requests.html', order_number=order.order_number)
+    return redirect('admin_return_requests') 
 
 def admin_reject_return(request, return_request_id):
     return_request = get_object_or_404(ReturnRequest, id=return_request_id)
