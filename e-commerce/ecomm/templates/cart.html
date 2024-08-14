@@ -156,10 +156,19 @@
 <script src="{% static 'js/jquery.min.js' %}"></script>
 <script>
     $(document).ready(function() {
+        var previousValue; // Variable to store the previous valid value
+
+        // Capture the previous valid value on focus
+        $('.quantity-input').on('focus', function() {
+            previousValue = $(this).val();
+        });
+
+        // Handle quantity change
         $('.quantity-input').on('change', function() {
-            var itemId = $(this).data('item-id');
-            var quantity = $(this).val();
-            
+            var $this = $(this);
+            var itemId = $this.data('item-id');
+            var quantity = $this.val();
+
             $.ajax({
                 url: '{% url "product_page:update_cart" %}',
                 type: 'POST',
@@ -173,13 +182,16 @@
                         location.reload();  // Reload the page to see updated cart
                     } else {
                         alert(response.error_message);
+                        $this.val(previousValue); // Reset the input to the previous valid value
                     }
                 },
                 error: function(xhr, status, error) {
                     console.log('Error:', xhr.responseText);
+                    $this.val(previousValue); // Reset the input to the previous valid value
                 }
             });
         });
     });
 </script>
+
 {% endblock %}

@@ -22,34 +22,39 @@ from decimal import Decimal
 
 
 def login_page(request):
+    # Check if the user is already authenticated
+    if request.user.is_authenticated:
+        return redirect('product_page:shop')  # Redirect to the shop page or another desired page
+
     if request.method == 'POST':
         form = LoginForm(request.POST)
         if form.is_valid():
             email = form.cleaned_data['email']
             password = form.cleaned_data['password']
             
+            # Debugging: Print email and password
             print(f"Email: {email}, Password: {password}")
             
-            user = authenticate(request, username=email, password=password)  # Using email for authentication
+            # Authenticate using email as username
+            user = authenticate(request, username=email, password=password)
             
+            # Debugging: Print the authenticated user
             print(f"Authenticated User: {user}")
             
             if user is not None:
-
                 if user.is_active:
                     login(request, user)
                     return redirect('product_page:shop')  # Redirect to your desired page
                 else:
-                    messages.error(request, 'Account is inactive.',extra_tags='login')
+                    messages.error(request, 'Account is inactive.', extra_tags='login')
             else:
-                messages.error(request, 'Invalid email or password.',extra_tags='login')
+                messages.error(request, 'Invalid email or password.', extra_tags='login')
         else:
-            messages.error(request, 'Please correct the errors below.',extra_tags='login')
+            messages.error(request, 'Please correct the errors below.', extra_tags='login')
     else:
         form = LoginForm()
 
     return render(request, 'accounts/login_page.html', {'form': form})
-
 
 def admin_login(request):
     if request.method == 'POST':

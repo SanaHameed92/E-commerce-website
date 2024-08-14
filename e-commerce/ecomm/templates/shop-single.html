@@ -112,7 +112,13 @@
             </div>
             
             <div class="col-md-6">
-                <h2 class="text-black">{{ product.title }}</h2>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="text-black mb-0">{{ product.title }}</h2>
+                    <form method="POST" action="{% url 'add_to_wishlist' product.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger"><i class="fa fa-heart"></i></button>
+                    </form>
+                </div>
                 <p>{{ product.description }}</p>
 
                 <div class="rating-container">
@@ -182,6 +188,11 @@
                             {% endif %}
                         </div>
                     </form>
+                    <!-- Wishlist Button -->
+                    <form method="POST" action="{% url 'add_to_wishlist' product.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger"><i class="fa fa-heart"></i> </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -238,9 +249,18 @@
             const maxQuantity = parseInt(this.dataset.maxQuantity, 10);
 
             if (quantity > maxQuantity) {
-                alert(`Only ${maxQuantity} items left in stock.`);
+                alert(`Only ${maxQuantity} items are available.`);
                 event.preventDefault();
             }
+        });
+    });
+
+    // Thumbnail click event listener
+    document.querySelectorAll('.thumbnail').forEach(thumbnail => {
+        thumbnail.addEventListener('click', function () {
+            const src = this.getAttribute('src');
+            const mainImage = document.querySelector('#main-image');
+            mainImage.setAttribute('src', src);
         });
     });
 </script>

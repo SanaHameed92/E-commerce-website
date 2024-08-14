@@ -25,6 +25,18 @@ class ProductForm(forms.ModelForm):
             
         ]
 
+    def clean_original_price(self):
+        original_price = self.cleaned_data.get('original_price')
+        if original_price < 0:
+            raise forms.ValidationError("Original price cannot be negative.")
+        return original_price
+
+    def clean_product_offer(self):
+        product_offer = self.cleaned_data.get('product_offer')
+        if product_offer < 0 or product_offer >= 100:
+            raise forms.ValidationError("Product offer must be between 0 and 100 percent.")
+        return product_offer
+
 
 
 class CategoryForm(forms.ModelForm):

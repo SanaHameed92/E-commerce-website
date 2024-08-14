@@ -243,7 +243,7 @@
         {% endfor %}
 
         <a href="{% url 'my_orders' %}" class="back-button">Back to My Orders</a>
-        {% if order.status != 'Cancelled' and order.status != 'Delivered' and not order.return_request %}
+        {% if order.status != 'Cancelled' and order.status != 'Delivered' and order.status != 'Pending' and not order.return_request %}
         <a href="{% url 'cancel_order' order_number=order.order_number %}" class="cancel-button" onclick="return confirm('Are you sure you want to cancel this order?')">Cancel Order</a>
         {% endif %}
         {% if order.status == 'Delivered' and not order.return_request %}
@@ -268,7 +268,6 @@
         <p>Status: {{ order.return_request.status }}</p>
         <p>Reason: {{ order.return_request.reason }}</p>
         <a href="{% url 'my_wallet' %}" class="wallet-button">View Wallet</a>
-        
     </div>
     {% endif %}
 </div>

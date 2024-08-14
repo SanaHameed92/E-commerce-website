@@ -72,6 +72,13 @@ def sale_report_view(request):
 
 
 
+def truncate_title(title, max_words=2):
+    """Truncate the title to a maximum of `max_words` words."""
+    words = title.split()
+    if len(words) > max_words:
+        return ' '.join(words[:max_words]) + '...'
+    return title
+
 def pdf_report_view(request):
     buffer = BytesIO()
     p = canvas.Canvas(buffer, pagesize=letter)
@@ -148,31 +155,29 @@ def pdf_report_view(request):
 
     y_position -= 20  # Adjust position for table headers
 
-    # Define column positions
+    # Define column positions with "User" instead of "Username"
     col_positions = {
         "id": 40,
-        "username": 80,
+        "user": 80,
         "order_date": 120,
         "product_title": 180,
         "og_price": 260,
         "quantity": 320,
         "discount": 380,
         "total_amount": 440,
-        "sold_amt": 500,
-        "status": 560
+        "status": 500
     }
 
     # Table Headers
     p.setFont("Helvetica-Bold", 8)
     p.drawString(col_positions["id"], y_position, "ID")
-    p.drawString(col_positions["username"], y_position, "Username")
+    p.drawString(col_positions["user"], y_position, "User")
     p.drawString(col_positions["order_date"], y_position, "Order Date")
     p.drawString(col_positions["product_title"], y_position, "Product Title")
     p.drawString(col_positions["og_price"], y_position, "OG Price")
     p.drawString(col_positions["quantity"], y_position, "Quantity")
     p.drawString(col_positions["discount"], y_position, "Discount")
     p.drawString(col_positions["total_amount"], y_position, "Total")
-    p.drawString(col_positions["sold_amt"], y_position, "Sold Amt")
     p.drawString(col_positions["status"], y_position, "Status")
 
     y_position -= 20  # Adjust position for table rows
@@ -180,25 +185,41 @@ def pdf_report_view(request):
     # Table Rows
     p.setFont("Helvetica", 8)
     row_height = 12  # Reduced row size
+    max_rows_per_page = int((height - y_position - 40) / row_height)  # Calculate max rows per page
+    row_count = 0
+
     for order in orders:
         for item in order.items.all():
+            if row_count >= max_rows_per_page:
+                p.showPage()  # Create a new page
+                p.setFont("Helvetica", 8)
+                y_position = height - 40  # Reset position for new page
+                row_count = 0
+                # Reprint headers
+                p.drawString(col_positions["id"], y_position, "ID")
+                p.drawString(col_positions["user"], y_position, "User")
+                p.drawString(col_positions["order_date"], y_position, "Order Date")
+                p.drawString(col_positions["product_title"], y_position, "Product Title")
+                p.drawString(col_positions["og_price"], y_position, "OG Price")
+                p.drawString(col_positions["quantity"], y_position, "Quantity")
+                p.drawString(col_positions["discount"], y_position, "Discount")
+                p.drawString(col_positions["total_amount"], y_position, "Total")
+                p.drawString(col_positions["status"], y_position, "Status")
+                y_position -= 20  # Adjust position for table rows
+
+            # Draw each row with "User" instead of "Username"
             p.drawString(col_positions["id"], y_position, str(item.id))
-            p.drawString(col_positions["username"], y_position, order.user.username)
+            p.drawString(col_positions["user"], y_position, order.user.username)
             p.drawString(col_positions["order_date"], y_position, order.created_at.strftime("%Y-%m-%d"))
-            p.drawString(col_positions["product_title"], y_position, item.product.title)
+            p.drawString(col_positions["product_title"], y_position, truncate_title(item.product.title))
             p.drawString(col_positions["og_price"], y_position, f"${item.product.original_price:.2f}")
             p.drawString(col_positions["quantity"], y_position, str(item.quantity))
             p.drawString(col_positions["discount"], y_position, f"{item.product.get_best_offer()}%")
             p.drawString(col_positions["total_amount"], y_position, f"${order.grand_total:.2f}")
-            p.drawString(col_positions["sold_amt"], y_position, f"${item.total_price:.2f}")
-            p.drawString(col_positions["status"], y_position, order.payment_method)
+            p.drawString(col_positions["status"], y_position, order.status)  # Changed from order.payment_method to order.status
 
             y_position -= row_height
-
-            if y_position < 40:  # Check if we need to create a new page
-                p.showPage()
-                p.setFont("Helvetica", 8)
-                y_position = height - 40  # Reset position for new page
+            row_count += 1
 
     p.showPage()
     p.save()

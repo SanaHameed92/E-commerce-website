@@ -9,6 +9,8 @@ from django.contrib import messages
 
 
 def index(request):
+    if request.user.is_authenticated:
+        return redirect('product_page:shop')
     return render(request,'index.html')
 
 def home(request):

@@ -2,6 +2,7 @@
 from decimal import Decimal
 import uuid
 from django.db import models
+from django.forms import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.conf import settings
@@ -89,7 +90,8 @@ class Product(models.Model):
         category_offer = self.category.category_offer if self.category else 0
         brand_offer = self.brand.brand_offer if self.brand else 0
         final_discount = max(self.product_offer, brand_offer,category_offer)
-        return self.original_price * (1 - (final_discount / 100))
+        discounted_price = self.original_price * (1 - (final_discount / 100))
+        return max(discounted_price, 0)
     
     def get_best_offer(self):
         
@@ -113,6 +115,10 @@ class Product(models.Model):
             self.availability_status = 'out_of_stock'
         elif self.quantity == 1:
             self.availability_status = 'in_stock'
+        if self.original_price < 0:
+            raise ValidationError("Original price cannot be negative.")
+        if self.product_offer < 0 or self.product_offer > 100:
+            raise ValidationError("Product offer must be between 0 and 100 percent.")
         super(Product, self).save(*args, **kwargs)
 
 
