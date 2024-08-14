@@ -9,7 +9,7 @@ from .models import Address, Wishlist
 from .forms import AddressForm
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
-from products.models import Order, Product
+from products.models import Order, OrderItem, Product
 from django.views.decorators.http import require_POST
 from django.db.models import Count
 from django.core.exceptions import MultipleObjectsReturned
@@ -139,8 +139,17 @@ def delete_order(request, order_number):
 
 
 def order_detail(request, order_number):
-    order = get_object_or_404(Order, order_number=order_number, user=request.user)
-    return render(request, 'user/order_detail.html', {'order': order})
+    try:
+        order = Order.objects.get(order_number=order_number)
+        order_items = OrderItem.objects.filter(order=order)
+    except Order.DoesNotExist:
+        return render(request, 'user/order_not_found.html')
+    
+    context = {
+        'order': order,
+        'order_items': order_items,
+    }
+    return render(request, 'user/order_detail.html', context)
 
 
 def cancel_order(request, order_number):

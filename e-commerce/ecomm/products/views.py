@@ -41,11 +41,11 @@ def shop(request):
 
     # Apply category filter
     if category_names:
-        product_list = product_list.filter(category__category_name__in=category_names)
+        product_list = product_list.filter(category__category_name__in=category_names).distinct()
 
     # Apply brand filter
     if brand_names:
-        product_list = product_list.filter(brand__brand_name__in=brand_names)
+        product_list = product_list.filter(brand__brand_name__in=brand_names).distinct()
 
     # Apply color filter
     if colors:
@@ -619,6 +619,18 @@ def razorpaycheck(request):
         order_number=str(uuid.uuid4()),
         status='Pending',
     )
+
+    cart_items = CartItem.objects.filter(cart=cart)
+    for cart_item in cart_items:
+        OrderItem.objects.create(
+            order=order,
+            product=cart_item.product,
+            quantity=cart_item.quantity,
+            total_price=cart_item.total_price,
+        )
+
+    # Optionally, you may clear the cart here if needed
+    cart_items.delete()
     
     return JsonResponse({
         'total_price': grand_total,

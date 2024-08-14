@@ -26,6 +26,7 @@
         .custom-form label {
             font-weight: bold;
             margin-bottom: 0.5rem;
+            color: black; /* Set label color to black */
         }
         .custom-form input, .custom-form select, .custom-form textarea {
             width: 100%;
@@ -41,9 +42,11 @@
             padding: 0.5rem 1rem;
             cursor: pointer;
         }
-        
-        
-          
+        .form-errors {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -51,14 +54,28 @@
         <h2>Edit Product</h2>
         <form method="post" action="{% url 'edit_product' product.pk %}" enctype="multipart/form-data" class="custom-form">
             {% csrf_token %}
-            {{ form.as_p }}
+            {% for field in form %}
+                <div class="form-group">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {% if field.errors %}
+                        <div class="form-errors">
+                            {% for error in field.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {{ field }}
+                </div>
+            {% endfor %}
+            
             {% for image in existing_images %}
-            <div>
+            <div class="form-group">
                 <img src="{{ image.image.url }}" alt="Product Image" class="img-thumbnail" style="max-width: 150px;"><br>
                 <label for="id_image_{{ image.id }}">Replace Image:</label>
                 <input type="file" name="image_{{ image.id }}" id="id_image_{{ image.id }}" ><br>
             </div>
-        {% endfor %}
+            {% endfor %}
+            
             <button type="submit" class="btn btn-primary">Update Product</button>
         </form>
     </div>
@@ -67,4 +84,4 @@
     <!-- Additional scripts as needed -->
 </body>
 </html>
-{%endblock%}
+{% endblock %}
