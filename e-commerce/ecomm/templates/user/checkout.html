@@ -41,17 +41,18 @@
                         </select>
                     </div>
                     <h2 class="text-black h4">Payment Method</h2>
-                    <div class="form-group">
-                        <label>Select Payment Method <span class="text-danger">*</span></label>
-                        <div>
-                            <input type="radio" id="razorpay" name="payment_method" value="RazorPay" class="mr-2" onclick="togglePaymentButton('razorpay')" required>
-                            <label for="razorpay">RazorPay</label>
+                        <div class="form-group">
+                            <label>Select Payment Method <span class="text-danger">*</span></label>
+                            <div>
+                                <input type="radio" id="razorpay" name="payment_method" value="RazorPay" class="mr-2" onclick="togglePaymentButton('razorpay')" required>
+                                <label for="razorpay">RazorPay</label>
+                            </div>
+                            <div>
+                                <input type="radio" id="cod" name="payment_method" value="COD" class="mr-2" onclick="togglePaymentButton('cod')" required>
+                                <label for="cod">Cash on Delivery</label>
+                                <span class="text-muted" style="margin-left: 8px;"><small>-Applicable for orders Rs 1000 or less.</small></span>
+                            </div>
                         </div>
-                        <div>
-                            <input type="radio" id="cod" name="payment_method" value="COD" class="mr-2" onclick="togglePaymentButton('cod')" required>
-                            <label for="cod">Cash on Delivery</label>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Coupon Code Section -->
@@ -215,6 +216,22 @@
         }
     }
 
+    document.getElementById('payWithCOD').addEventListener('click', function(event) {
+        event.preventDefault(); // Prevent form submission initially
+        var grandTotal = parseFloat(document.getElementById('grand_total').textContent.replace('$', ''));
+        if (grandTotal > 1000) {
+            alert("Orders above Rs 1000 are not allowed for Cash on Delivery. Please choose a different payment method.");
+        } else {
+            document.getElementById('checkout-form').submit(); // Submit the form manually
+        }
+    });
+
+    document.getElementById('payWithRazorpay').addEventListener('click', function(event) {
+        event.preventDefault(); // Prevent form submission initially
+        // Add your RazorPay payment integration code here
+        document.getElementById('checkout-form').submit(); // Submit the form manually
+    });
+
     function applyCoupon() {
         var couponCode = document.getElementById('coupon_code').value;
         var csrfToken = '{{ csrf_token }}';
@@ -312,5 +329,6 @@
         });
     }
 </script>
+    
 
 {% endblock %}
