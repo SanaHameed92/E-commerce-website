@@ -3,7 +3,6 @@
 {% block content %}
 <style>
     /* Existing styles */
-
     .order-detail-container {
         margin-top: 50px;
         position: relative;
@@ -74,13 +73,15 @@
         border-radius: 4px;
     }
 
-    .back-button, .cancel-button, .return-button {
+    .back-button, .cancel-button, .return-button, .invoice-button {
         margin-top: 20px;
         display: inline-block;
         padding: 8px 16px;
         border-radius: 5px;
         text-decoration: none;
         text-align: center;
+        font-weight: bold;
+        transition: background-color 0.3s, border-color 0.3s;
     }
 
     .back-button {
@@ -108,6 +109,22 @@
 
     .return-button:hover {
         background-color: #218838;
+    }
+
+    .invoice-button {
+        background-color: #ffc107;
+        color: #fff;
+        border: 1px solid #e0a800;
+    }
+
+    .invoice-button:hover {
+        background-color: #e0a800;
+        border-color: #d39e00;
+    }
+
+    .invoice-button:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.5);
     }
 
     .status-ordered {
@@ -189,10 +206,33 @@
         border-color: #f5c6cb;
         color: #721c24;
     }
+
+    /* New styles for button positioning */
+    .order-detail-actions {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        gap: 10px;
+    }
 </style>
 
 <div class="container order-detail-container">
     <div class="order-detail-content">
+        <div class="order-detail-actions">
+            {% if order.status == 'Delivered' %}
+                <a href="{% url 'generate_invoice' order_number=order.order_number %}" class="invoice-button">Download Invoice</a>
+            {% elif order.status == 'Ordered' and order.payment_method == 'RazorPay' %}
+                <a href="{% url 'generate_invoice' order_number=order.order_number %}" class="invoice-button">Download Invoice</a>
+            {% endif %}
+
+        
+        
+            {% if order.status == 'Delivered' and not order.return_request %}
+                <a href="{% url 'request_return' order_number=order.order_number %}" class="return-button" onclick="return confirm('Are you sure you want to request a return?')">Request Return</a>
+            {% endif %}
+        </div>
+
         <h2>Order Details</h2>
         <h3>Order Number: {{ order.order_number }}</h3>
         <p>Date: {{ order.created_at|date:"Y-m-d H:i" }}</p>
@@ -245,9 +285,6 @@
         <a href="{% url 'my_orders' %}" class="back-button">Back to My Orders</a>
         {% if order.status != 'Cancelled' and order.status != 'Delivered' and order.status != 'Pending' and not order.return_request %}
         <a href="{% url 'cancel_order' order_number=order.order_number %}" class="cancel-button" onclick="return confirm('Are you sure you want to cancel this order?')">Cancel Order</a>
-        {% endif %}
-        {% if order.status == 'Delivered' and not order.return_request %}
-        <a href="{% url 'request_return' order_number=order.order_number %}" class="return-button" onclick="return confirm('Are you sure you want to request a return?')">Request Return</a>
         {% endif %}
     </div>
     

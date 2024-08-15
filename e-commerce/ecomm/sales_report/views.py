@@ -10,6 +10,8 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib.styles import getSampleStyleSheet
 from django.utils.timezone import make_naive
+from django.template.loader import render_to_string
+from xhtml2pdf import pisa
 
 def sale_report_view(request):
     filter_option = request.GET.get('filter', 'all')
@@ -281,3 +283,79 @@ def download_sales_report_excel(request):
     df.to_excel(response, index=False, engine='openpyxl')
 
     return response
+
+
+def download_sales_report_excel(request):
+    # Filter orders based on the user's selected filter
+    filter_option = request.GET.get('filter', 'all')
+
+    if filter_option == 'today':
+        orders = Order.objects.filter(created_at__date=timezone.now().date())
+    elif filter_option == 'weekly':
+        start_of_week = timezone.now() - timedelta(days=timezone.now().weekday())
+        orders = Order.objects.filter(created_at__date__gte=start_of_week)
+    elif filter_option == 'monthly':
+        orders = Order.objects.filter(created_at__month=timezone.now().month)
+    elif filter_option == 'yearly':
+        orders = Order.objects.filter(created_at__year=timezone.now().year)
+    elif filter_option == 'custom':
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        if start_date and end_date:
+            orders = Order.objects.filter(created_at__date__range=[start_date, end_date])
+        else:
+            orders = Order.objects.all()
+    else:
+        orders = Order.objects.all()
+
+    # Prepare the data for the Excel file
+    data = []
+    for order in orders:
+        for item in order.items.all():
+            data.append({
+                'Order ID': order.id,
+                'Username': order.user.username,
+                'Product Title': item.product.title,
+                'Original Price': item.product.original_price,
+                'Sold Price': item.total_price,
+                'Quantity': item.quantity,
+                'Discount': item.product.get_best_offer(),
+                'Total Amount': order.grand_total,
+                'Status': order.status,
+                'Payment Method': order.payment_method,
+            })
+
+    # Create a DataFrame
+    df = pd.DataFrame(data)
+
+    # Create a response object and set the appropriate headers
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=sales_report.xlsx'
+
+    # Use pandas to write the DataFrame to the response
+    df.to_excel(response, index=False, engine='openpyxl')
+
+    return response
+
+def generate_invoice(request, order_number):
+    order = Order.objects.get(order_number=order_number)
+    
+    # Prepare the context for the template
+    context = {
+        'order': order,
+        'user': order.user,
+    }
+    
+    # Render the HTML template with the context
+    html_string = render_to_string('invoice_template.html', context)
+    
+    # Convert HTML to PDF
+    result = BytesIO()
+    pdf = pisa.pisaDocument(BytesIO(html_string.encode("UTF-8")), result)
+    
+    # Create the HTTP response with the PDF file
+    if not pdf.err:
+        response = HttpResponse(result.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="invoice_{order_number}.pdf"'
+        return response
+    return None
