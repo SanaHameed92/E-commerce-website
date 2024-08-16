@@ -23,6 +23,7 @@ class Category(models.Model):
 
     def __str__(self):
         return self.category_name
+    
 
 class Brand(models.Model):
     brand_name = models.CharField(max_length=255)   

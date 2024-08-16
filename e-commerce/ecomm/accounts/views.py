@@ -4,7 +4,7 @@ from django.contrib.auth import authenticate, login, logout as auth_logout
 from django.contrib.auth import login as auth_login
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from products.models import Brand, Color, Order, Product, Category,ProductImage, Size
+from products.models import Brand, Color, Order, OrderItem, Product, Category,ProductImage, Size
 from products.forms import BrandForm, CategoryForm, ColorForm, ProductForm, ProductImageForm, SizeForm
 from .forms import AdminLoginForm, SignupForm, LoginForm
 from django.contrib.auth import get_user_model
@@ -19,7 +19,9 @@ from django.contrib.auth.tokens import default_token_generator
 from .models import Account
 from wallet.models import Referral, WalletTransaction
 from decimal import Decimal
-
+from django.db.models.functions import TruncDay, TruncMonth, TruncYear
+from django.db.models import Count, Sum
+import calendar
 
 def login_page(request):
     # Check if the user is already authenticated
@@ -129,11 +131,101 @@ def signup(request):
     return render(request, 'accounts/signup.html', {'form': form})
 
 def admin_dashboard(request):
+    # Determine the time period for filtering orders
+    filter_type = request.GET.get('filter', 'daily')  # Default to daily if no filter is provided
+
+    # Define the aggregation function based on filter type
+    if filter_type == 'monthly':
+        truncate_func = TruncMonth
+        months = [calendar.month_abbr[i] for i in range(1, 13)]  # List of month abbreviations
+    elif filter_type == 'yearly':
+        truncate_func = TruncYear
+        months = []  # No need for month labels if filtering yearly
+    else:  # Default to daily
+        truncate_func = TruncDay
+        months = []  # No need for month labels if filtering daily
+
+    # Aggregate order data based on the selected filter
+    aggregated_orders = (
+        Order.objects
+        .annotate(date=truncate_func('created_at'))
+        .values('date')
+        .annotate(order_count=Count('id'))
+        .order_by('date')
+    )
+
+    # Prepare data for the chart
+    if filter_type == 'monthly':
+        # Create a dictionary to map months to counts
+        monthly_data = {calendar.month_abbr[i]: 0 for i in range(1, 13)}
+        for order in aggregated_orders:
+            month_name = calendar.month_abbr[order['date'].month]
+            monthly_data[month_name] = order['order_count']
+
+        chart_labels = months
+        chart_data = [monthly_data[month] for month in months]
+    elif filter_type == 'yearly':
+        chart_labels = [order['date'].strftime('%Y') for order in aggregated_orders]
+        chart_data = [order['order_count'] for order in aggregated_orders]
+    else:  # Default to daily
+        chart_labels = [order['date'].strftime('%Y-%m-%d') for order in aggregated_orders]
+        chart_data = [order['order_count'] for order in aggregated_orders]
+
+    # Fetch most selling products data
+    most_selling_products = (
+        OrderItem.objects
+        .values('product__title')
+        .annotate(total_sales=Sum('quantity'))
+        .order_by('-total_sales')[:10]  # Top 10 most selling products
+    )
+
+    # Prepare data for the most selling products chart
+    product_labels = [item['product__title'] for item in most_selling_products]
+    product_data = [item['total_sales'] for item in most_selling_products]
+
+    most_selling_brands = (
+        OrderItem.objects
+        .values('product__brand__brand_name')
+        .annotate(total_quantity=Count('quantity'))
+        .order_by('-total_quantity')[:10]  # Get top 10 selling brands
+    )
+    brand_labels = [item['product__brand__brand_name'] for item in most_selling_brands]
+    brand_data = [item['total_quantity'] for item in most_selling_brands]
+
+    # Fetch all orders
     orders = Order.objects.all()
+    total_sales = Order.objects.filter(status='Delivered').aggregate(total_sales=Sum('grand_total'))['total_sales'] or 0
+    total_orders = Order.objects.count()
+    active_users = get_user_model().objects.filter(is_active=True).count()
+    total_products = Product.objects.count()
+    delivered_orders = Order.objects.filter(status='Delivered').count()
+    shipped_orders = Order.objects.filter(status='Shipped').count()
+    cancelled_orders = Order.objects.filter(status='Cancelled').count()
+    returned_orders = Order.objects.filter(status='Returned').count()
+    context = {
+        'orders': orders,
+        'chart_labels': chart_labels,
+        'chart_data': chart_data,
+        'product_labels': product_labels,
+        'product_data': product_data,
+        'brand_labels': brand_labels,
+        'brand_data': brand_data,
+        'selected_filter': filter_type,
+        'total_sales': total_sales,
+        'total_orders': total_orders,
+        'active_users': active_users,
+        'total_products': total_products,
+         'delivered_orders': delivered_orders,
+        'shipped_orders': shipped_orders,
+        'cancelled_orders': cancelled_orders,
+        'returned_orders': returned_orders,
+    }
+
     if request.user.is_authenticated and request.user.is_staff:
-        return render(request, 'accounts/admin_dashboard.html', {'orders': orders})
+        return render(request, 'accounts/admin_dashboard.html', context)
     else:
         return redirect('main_page:index')
+    
 
 def admin_products(request):
     products = Product.objects.all()

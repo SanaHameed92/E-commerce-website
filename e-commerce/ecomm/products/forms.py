@@ -44,10 +44,23 @@ class CategoryForm(forms.ModelForm):
         model = Category
         fields = ['category_name','category_offer','is_active']
 
+
+    def clean_category_offer(self):
+        category_offer = self.cleaned_data.get('category_offer')
+        if category_offer < 0 or category_offer >= 100:
+            raise forms.ValidationError("Category offer must be between 0 and 100 percent.")
+        return category_offer
+
 class BrandForm(forms.ModelForm):
     class Meta:
         model = Brand
         fields = ['brand_name','brand_offer']
+
+    def clean_brand_offer(self):
+        brand_offer = self.cleaned_data.get('brand_offer')
+        if brand_offer < 0 or brand_offer >= 100:
+            raise forms.ValidationError("Brand offer must be between 0 and 100 percent.")
+        return brand_offer
 
 class SizeForm(forms.ModelForm):
     class Meta:
