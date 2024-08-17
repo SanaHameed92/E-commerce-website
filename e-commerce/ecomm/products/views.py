@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from decimal import Decimal
+import json
 from django.utils import timezone
 import uuid
 from django.shortcuts import render, get_object_or_404
@@ -14,6 +15,7 @@ from django.db.models import Count
 from .forms import CouponForm, ProductVariantForm
 from wallet.models import Referral
 from django.db.models import Count, Q
+from django.views.decorators.csrf import csrf_exempt
 
 
 def shop(request):
@@ -594,51 +596,59 @@ def delete_product_variant(request, pk):
     return render(request, 'confirm_delete.html', {'object': variant})
 
 
+@csrf_exempt 
 def razorpaycheck(request):
-    cart = Cart.objects.filter(user=request.user).first()
-    total_price = sum(item.total_price for item in CartItem.objects.filter(cart=cart))
-    shipping_fee = 50 if total_price <= 350 else 0  # Example shipping fee, replace with your actual logic
-    grand_total = total_price + shipping_fee
-    
-    
-    # You can decide on how to get the address_id, for simplicity, I'm using the first address
-    address = Address.objects.filter(user=request.user).first()
-    
-    
-    if not address:
-        return JsonResponse({'error': 'No address found for the user'}, status=400)
-    
-    # Create a preliminary order with status 'Pending'
-    order = Order.objects.create(
-        user=request.user,
-        address=address,
-        payment_method='RazorPay',  # Since it's a razorpaycheck
-        total_amount=total_price,
-        shipping_fee=shipping_fee,
-        grand_total=grand_total,
-        order_number=str(uuid.uuid4()),
-        status='Pending',
-    )
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            selected_address = data.get('selected_address')
+            payment_method = data.get('payment_method')
 
-    cart_items = CartItem.objects.filter(cart=cart)
-    for cart_item in cart_items:
-        OrderItem.objects.create(
-            order=order,
-            product=cart_item.product,
-            quantity=cart_item.quantity,
-            total_price=cart_item.total_price,
-        )
+            cart = Cart.objects.filter(user=request.user).first()
+            total_price = sum(item.total_price for item in CartItem.objects.filter(cart=cart))
+            shipping_fee = 50 if total_price <= 350 else 0
+            grand_total = total_price + shipping_fee
 
-    # Optionally, you may clear the cart here if needed
-    cart_items.delete()
-    
-    return JsonResponse({
-        'total_price': grand_total,
-        'first_name': request.user.first_name,
-        'email': request.user.email,
-        'phone_number': request.user.phone_number,
-        'order_id': order.order_number,  # Include order_id in the response
-    })
+            address = Address.objects.filter(user=request.user).first()
+
+            if not address:
+                return JsonResponse({'error': 'No address found for the user'}, status=400)
+
+            order = Order.objects.create(
+                user=request.user,
+                address=address,
+                payment_method='RazorPay',
+                total_amount=total_price,
+                shipping_fee=shipping_fee,
+                grand_total=grand_total,
+                order_number=str(uuid.uuid4()),
+                status='Pending',
+            )
+
+            cart_items = CartItem.objects.filter(cart=cart)
+            for cart_item in cart_items:
+                OrderItem.objects.create(
+                    order=order,
+                    product=cart_item.product,
+                    quantity=cart_item.quantity,
+                    total_price=cart_item.total_price,
+                )
+
+            cart_items.delete()
+
+            return JsonResponse({
+                'total_price': grand_total,
+                'first_name': request.user.first_name,
+                'email': request.user.email,
+                'phone_number': request.user.phone_number,
+                'order_id': order.order_number,
+            })
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 def confirm_order_razorpay(request):
     if request.method == 'POST':
