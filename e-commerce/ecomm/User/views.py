@@ -142,12 +142,19 @@ def order_detail(request, order_number):
     try:
         order = Order.objects.get(order_number=order_number)
         order_items = OrderItem.objects.filter(order=order)
+        
+        # Determine if the payment button should be shown
+        can_continue_payment = (
+            order.status == 'Pending' or 
+            (order.status == 'Ordered' and order.payment_method == 'COD')
+        )
     except Order.DoesNotExist:
         return render(request, 'user/order_not_found.html')
-    
+
     context = {
         'order': order,
         'order_items': order_items,
+        'can_continue_payment': can_continue_payment,
     }
     return render(request, 'user/order_detail.html', context)
 
