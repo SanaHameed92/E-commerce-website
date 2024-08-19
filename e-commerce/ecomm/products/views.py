@@ -514,6 +514,8 @@ def order_success(request, order_number):
 
     if order.status == 'Pending':
         order.status = 'Ordered'
+
+    
         
         order.save()
 
