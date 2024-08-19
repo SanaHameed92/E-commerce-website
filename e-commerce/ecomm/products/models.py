@@ -168,6 +168,12 @@ class Order(models.Model):
         ('Cancelled', 'Cancelled'),
         ('Returned', 'Returned'),
     )
+    PAYMENT_STATUS_CHOICES = (
+        ('Pending', 'Pending'),
+        ('Completed', 'Completed'),
+        ('Failed', 'Failed'),
+        ('Refunded', 'Refunded'),
+    )
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     address = models.ForeignKey(Address, on_delete=models.CASCADE)
@@ -178,7 +184,8 @@ class Order(models.Model):
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     order_number = models.CharField(max_length=50, unique=True, default=uuid.uuid4().hex)
     grand_total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Ordered')  # Added status field
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Ordered') 
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='Pending') 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     payment_id = models.CharField(max_length=255, blank=True, null=True) 

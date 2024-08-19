@@ -508,21 +508,20 @@ def place_order(request):
 
 
 def order_success(request, order_number):
-    
     # Fetch the order using the order_number
     order = get_object_or_404(Order, order_number=order_number)
 
-    if order.status == 'Pending':
+    # Update the payment status to completed and order status to ordered if necessary
+    if order.payment_status == 'Pending':
+        order.payment_status = 'Completed'
         order.status = 'Ordered'
-
-    
-        
         order.save()
 
+        # Clear the cart for the user
         cart_items = CartItem.objects.filter(cart__user=request.user)
         cart_items.delete()
-            
-            # Decrement product quantities
+        
+        # Decrement product quantities
         for item in order.items.all():
             product = item.product
             if product.quantity >= item.quantity:
@@ -531,11 +530,10 @@ def order_success(request, order_number):
             else:
                 # Handle the case where stock is insufficient, if needed
                 pass
-    
+
     context = {
         'order': order,
         'order_number': order_number,
-      
     }
 
     return render(request, 'user/order_success.html', context)
@@ -672,42 +670,68 @@ def razorpaycheck(request):
 
 def confirm_order_razorpay(request):
     if request.method == 'POST':
-        order_number = request.POST.get('order_id')
-        payment_id = request.POST.get('payment_id')
-        
-        try:        
-            order = Order.objects.get(order_number=order_number)
-            order.payment_id = payment_id
-            order.status = 'Ordered'
-            order.save()
-            
-            cart_items = CartItem.objects.filter(cart__user=request.user)
-            for cart_item in cart_items:
-                product = cart_item.product
-                
-                if product.quantity < cart_item.quantity:
-                    return JsonResponse({'status': f"Insufficient stock for product {product.title}."}, status=400)
-                
-                
-                product.quantity -= cart_item.quantity
-                product.popularity += cart_item.quantity
-                product.save()
+        try:
+            data = json.loads(request.body)
+            order_number = data.get('order_id')
+            payment_id = data.get('payment_id')
 
-                order_item, created = OrderItem.objects.get_or_create(
-                order=order,
-                product=product,
-                defaults={'quantity': cart_item.quantity, 'total_price': cart_item.total_price}
-            )
-            
-            cart_items.delete()
-            
-            return JsonResponse({'status': 'Order placed successfully', 'order_number': order.order_number})
-        
-        except Order.DoesNotExist:
-            return JsonResponse({'status': 'Invalid order ID'}, status=400)
+            order = get_object_or_404(Order, order_number=order_number)
+
+            if order.payment_method == 'COD':
+                # Update payment status to Completed for COD
+                order.payment_status = 'Completed'
+                order.save()
+
+                # Handle stock and cart operations
+                cart_items = CartItem.objects.filter(cart__user=request.user)
+                for cart_item in cart_items:
+                    product = cart_item.product
+                    if product.quantity < cart_item.quantity:
+                        return JsonResponse({'status': f"Insufficient stock for product {product.title}."}, status=400)
+                    product.quantity -= cart_item.quantity
+                    product.popularity += cart_item.quantity
+                    product.save()
+
+                    OrderItem.objects.update_or_create(
+                        order=order,
+                        product=product,
+                        defaults={'quantity': cart_item.quantity, 'total_price': cart_item.total_price}
+                    )
+
+                cart_items.delete()
+                return JsonResponse({'status': 'Order placed successfully', 'order_number': order.order_number})
+
+            elif order.payment_method == 'RazorPay':
+                order.payment_id = payment_id
+                order.payment_status = 'Completed'  # Assuming payment is successful
+                order.status = 'Ordered'
+                order.save()
+
+                # Handle stock and cart operations
+                cart_items = CartItem.objects.filter(cart__user=request.user)
+                for cart_item in cart_items:
+                    product = cart_item.product
+                    if product.quantity < cart_item.quantity:
+                        return JsonResponse({'status': f"Insufficient stock for product {product.title}."}, status=400)
+                    product.quantity -= cart_item.quantity
+                    product.popularity += cart_item.quantity
+                    product.save()
+
+                    OrderItem.objects.update_or_create(
+                        order=order,
+                        product=product,
+                        defaults={'quantity': cart_item.quantity, 'total_price': cart_item.total_price}
+                    )
+
+                cart_items.delete()
+                return JsonResponse({'status': 'Order placed successfully', 'order_number': order.order_number})
+
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'Invalid JSON data'}, status=400)
         except Exception as e:
-            return JsonResponse({'status': f"An error occurred while placing the order: {e}"}, status=500)
-        
+            return JsonResponse({'status': f"An error occurred: {str(e)}"}, status=500)
+    else:
+        return JsonResponse({'status': 'Invalid request method'}, status=405)
 
 def order_failed(request):
     return render(request, 'user/order_failed.html')
