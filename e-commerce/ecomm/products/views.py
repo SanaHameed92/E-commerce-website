@@ -634,7 +634,7 @@ def razorpaycheck(request):
                     total_price=cart_item.total_price,
                 )
 
-            cart_items.delete()
+            
 
             return JsonResponse({
                 'total_price': grand_total,
@@ -655,7 +655,7 @@ def confirm_order_razorpay(request):
         order_number = request.POST.get('order_id')
         payment_id = request.POST.get('payment_id')
         
-        try:
+        try:        
             order = Order.objects.get(order_number=order_number)
             order.payment_id = payment_id
             order.status = 'Ordered'
@@ -668,18 +668,18 @@ def confirm_order_razorpay(request):
                 if product.quantity < cart_item.quantity:
                     return JsonResponse({'status': f"Insufficient stock for product {product.title}."}, status=400)
                 
-                OrderItem.objects.create(
-                    order=order,
-                    product=product,
-                    quantity=cart_item.quantity,
-                    total_price=cart_item.total_price,
-                )
                 
                 product.quantity -= cart_item.quantity
                 product.popularity += cart_item.quantity
                 product.save()
+
+                order_item, created = OrderItem.objects.get_or_create(
+                order=order,
+                product=product,
+                defaults={'quantity': cart_item.quantity, 'total_price': cart_item.total_price}
+            )
             
-            CartItem.objects.filter(cart__user=request.user).delete()
+            cart_items.delete()
             
             return JsonResponse({'status': 'Order placed successfully', 'order_number': order.order_number})
         
