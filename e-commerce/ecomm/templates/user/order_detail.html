@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
 <style>
     /* Existing styles */
     .order-detail-container {
@@ -73,7 +75,7 @@
         border-radius: 4px;
     }
 
-    .back-button, .cancel-button, .return-button, .invoice-button {
+    .back-button, .cancel-button, .return-button, .invoice-button, .continue-button {
         margin-top: 20px;
         display: inline-block;
         padding: 8px 16px;
@@ -127,6 +129,15 @@
         box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.5);
     }
 
+    .continue-button {
+        background-color: #17a2b8;
+        color: #fff;
+    }
+
+    .continue-button:hover {
+        background-color: #138496;
+    }
+
     .status-ordered {
         color: #007bff;
     }
@@ -144,6 +155,10 @@
     }
 
     .status-returned {
+        color: #ffc107;
+    }
+
+    .status-pending {
         color: #ffc107;
     }
 
@@ -207,7 +222,17 @@
         color: #721c24;
     }
 
-    /* New styles for button positioning */
+    /* New styles for payment pending message */
+    .payment-pending-message {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        padding: 15px;
+        border-radius: 5px;
+        margin-top: 20px;
+        font-size: 1.1rem;
+    }
+
     .order-detail-actions {
         position: absolute;
         top: 20px;
@@ -224,10 +249,10 @@
                 <a href="{% url 'generate_invoice' order_number=order.order_number %}" class="invoice-button">Download Invoice</a>
             {% elif order.status == 'Ordered' and order.payment_method == 'RazorPay' %}
                 <a href="{% url 'generate_invoice' order_number=order.order_number %}" class="invoice-button">Download Invoice</a>
+            {% elif can_continue_payment %}
+                <a href="#" id="continue-payment-btn" class="continue-button">Continue Payment</a>
             {% endif %}
 
-        
-        
             {% if order.status == 'Delivered' and not order.return_request %}
                 <a href="{% url 'request_return' order_number=order.order_number %}" class="return-button" onclick="return confirm('Are you sure you want to request a return?')">Request Return</a>
             {% endif %}
@@ -236,7 +261,7 @@
         <h2>Order Details</h2>
         <h3>Order Number: {{ order.order_number }}</h3>
         <p>Date: {{ order.created_at|date:"Y-m-d H:i" }}</p>
-        <p class="{% if order.status == 'Ordered' %}status-ordered{% elif order.status == 'Shipped' %}status-shipped{% elif order.status == 'Delivered' %}status-delivered{% elif order.status == 'Cancelled' %}status-cancelled{% elif order.status == 'Returned' %}status-returned{% endif %}">
+        <p class="{% if order.status == 'Ordered' %}status-ordered{% elif order.status == 'Shipped' %}status-shipped{% elif order.status == 'Delivered' %}status-delivered{% elif order.status == 'Cancelled' %}status-cancelled{% elif order.status == 'Returned' %}status-returned{% elif order.status == 'Pending' %}status-pending{% endif %}">
             Status: {{ order.status }}
         </p>
         <p>Total: ${{ order.grand_total|floatformat:2 }}</p>
@@ -273,6 +298,13 @@
             </tbody>
         </table>
         
+        <!-- Display payment pending message if applicable -->
+        {% if order.status == 'Pending' %}
+            <div class="payment-pending-message">
+                Payment is pending. Please complete your payment by clicking the "Continue Payment" button above.
+            </div>
+        {% endif %}
+
         <!-- Display messages with the custom tag -->
         {% for message in messages %}
             {% if message.tags == 'order_detail' %}
@@ -289,18 +321,16 @@
     </div>
     
     <!-- Display refund information -->
-    {% if order.refund %}
+    {% if order.status == 'Cancelled' %}
     <div class="refund-info">
         <h4>Refund Information:</h4>
-        <p>Amount: ${{ order.refund.amount|floatformat:2 }}</p>
-        <p>Status: {{ order.refund.status }}</p>
-        <a href="{% url 'wallet_view' %}" class="wallet-button">View Wallet</a>
+        <a href="{% url 'my_wallet' %}" class="wallet-button">View Wallet</a>
     </div>
     {% endif %}
 
     <!-- Display return request status and wallet button if confirmed -->
     {% if order.return_request %}
-    <div class="return-status {% if order.return_request.status == 'Accepted' %}accepted{% else %}rejected{% endif %}">
+    <div class="return-status {% if order.return_request.status == 'Confimed' %}accepted{% else %}rejected{% endif %}">
         <h4>Return Request Status:</h4>
         <p>Status: {{ order.return_request.status }}</p>
         <p>Reason: {{ order.return_request.reason }}</p>
@@ -308,4 +338,41 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var continuePaymentButton = document.getElementById('continue-payment-btn');
+        
+        if (continuePaymentButton) {
+            continuePaymentButton.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                var options = {
+                    "key": "rzp_test_Yl6grfBbwpSDvh", 
+                    "amount": {{ order.grand_total|floatformat:2}} * 100, // Amount in paise
+                    "currency": "INR",
+                    "name": "Your Company Name",
+                    "description": "Order Payment",
+                    "order_id": "{{ order.razorpay_order_id }}", // Razorpay Order ID
+                    "handler": function (response){
+                        // Handle payment success
+                        window.location.href = "{% url 'product_page:order_success' order_number=order.order_number %}";
+                    },
+                    "prefill": {
+                        "name": "{{ order.address.first_name }} {{ order.address.last_name }}",
+                        "email": "{{ user.email }}",
+                        "contact": "{{ order.address.phone_number }}"
+                    },
+                    "theme": {
+                        "color": "#3399cc"
+                    }
+                };
+                
+                var rzp = new Razorpay(options);
+                rzp.open();
+            });
+        }   
+    });
+</script>
+
 {% endblock %}

@@ -511,6 +511,24 @@ def order_success(request, order_number):
     
     # Fetch the order using the order_number
     order = get_object_or_404(Order, order_number=order_number)
+
+    if order.status == 'Pending':
+        order.status = 'Ordered'
+        
+        order.save()
+
+        cart_items = CartItem.objects.filter(cart__user=request.user)
+        cart_items.delete()
+            
+            # Decrement product quantities
+        for item in order.items.all():
+            product = item.product
+            if product.quantity >= item.quantity:
+                product.quantity -= item.quantity
+                product.save()
+            else:
+                # Handle the case where stock is insufficient, if needed
+                pass
     
     context = {
         'order': order,
@@ -687,3 +705,7 @@ def confirm_order_razorpay(request):
             return JsonResponse({'status': 'Invalid order ID'}, status=400)
         except Exception as e:
             return JsonResponse({'status': f"An error occurred while placing the order: {e}"}, status=500)
+        
+
+def order_failed(request):
+    return render(request, 'user/order_failed.html')

@@ -29,7 +29,8 @@ urlpatterns = [
     path('variants/add/', views.add_product_variant, name='add_product_variant'),
     path('variants/edit/<int:pk>/', views.edit_product_variant, name='edit_product_variant'),
     path('variants/delete/<int:pk>/', views.delete_product_variant, name='delete_product_variant'),
-    path('confirm-order-razorpay/', views.confirm_order_razorpay, name='confirm_order_razorpay'),  # URL for confirm_order_razorpay view
+    path('confirm-order-razorpay/', views.confirm_order_razorpay, name='confirm_order_razorpay'),
+    path('order-failed/', views.order_failed, name='order_failed'),
     
     
     
