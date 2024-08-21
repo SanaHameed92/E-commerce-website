@@ -90,20 +90,7 @@
                 </div>
 
                 <!-- Referral Code Section -->
-                <div class="col-md-12 mb-5">
-                    <h2 class="text-black h4">Referral Code</h2>
-                    <div class="form-group">
-                        <label for="referral_code">Enter your referral code</label>
-                        <div class="input-group">
-                            <input type="text" id="referral_code" name="referral_code" class="form-control" placeholder="Enter referral code">
-                            <div class="input-group-append">
-                                <button type="button" class="btn btn-primary" onclick="applyReferral()">Apply Referral</button>
-                            </div>
-                        </div>
-                        <p id="referral_message" class="text-success mt-2"></p>
-                    </div>
-                </div>
-
+              
                 <div class="col-md-12">
                     <h2 class="text-black h4">Order Summary</h2>
                     <table class="table table-bordered">
@@ -135,7 +122,7 @@
                         </div>
                         <div class="col-md-6 text-right">
                             <strong class="text-black">$
-                                <span id="subtotal">{{ total }}</span>
+                                <span id="subtotal">{{ total|floatformat:2 }}</span>
                             </strong>
                         </div>
                     </div>
@@ -156,16 +143,6 @@
                         <div class="col-md-6 text-right">
                             <strong class="text-black">
                                 <span id="discount_amount">$0.00</span>
-                            </strong>
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <span class="text-black">Referral Discount</span>
-                        </div>
-                        <div class="col-md-6 text-right">
-                            <strong class="text-black">
-                                <span id="referral_discount">$0.00</span>
                             </strong>
                         </div>
                     </div>

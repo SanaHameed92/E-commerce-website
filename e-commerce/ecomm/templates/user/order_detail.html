@@ -260,11 +260,18 @@
             {% if order.status == 'Delivered' %}
                 <a href="{% url 'generate_invoice' order_number=order.order_number %}" class="invoice-button">Download Invoice</a>
             {% elif order.payment_method == 'COD' and order.status == 'Ordered' %}
+                {% if order.payment_status == 'Completed'%}
                 <!-- Payment is considered successful for COD orders with Ordered status -->
-                <div class="payment-success-container">
-                    <span class="payment-success">Payment Successful!</span>
-                    <a href="{% url 'generate_invoice' order_number=order.order_number %}" class="invoice-button">Download Invoice</a>
+                    <div class="payment-success-container">
+                        <span class="payment-success">Payment Successful  !</span>
+                        <a href="{% url 'generate_invoice' order_number=order.order_number %}" class="invoice-button">Download Invoice</a>
+                    </div>
+                {% elif order.payment_status == 'Pending'%}
+                <a href="#" id="continue-payment-btn" class="continue-button">Continue Payment</a>
+                <div class="payment-status-container">
+                    <span class="payment-status">{{ order.payment_status }}</span>
                 </div>
+                {%endif%}
             {% elif order.payment_method == 'RazorPay' %}
                 {% if order.status == 'Pending' %}
                     <!-- Payment is pending for RazorPay orders with pending status -->
@@ -299,7 +306,7 @@
         </p>
         <p>Total: ${{ order.grand_total|floatformat:2 }}</p>
         <p>Payment Method: {{ order.payment_method }}</p>
-        <p>Payment Status: {{ order.payment_status }}</p> <!-- New line for payment status -->
+        <p>Payment Status: {{ order.payment_status }}</p> 
 
         <h4>Shipping Address:</h4>
         <p>Name: {{ order.address.first_name }} {{ order.address.last_name }}</p>
@@ -343,8 +350,12 @@
 
         <a href="{% url 'my_orders' %}" class="back-button">Back to My Orders</a>
         {% if order.status != 'Cancelled' and order.status != 'Delivered' and order.status != 'Pending' and not order.return_request %}
+    {% if order.payment_method != 'COD' or order.payment_status != 'Pending' %}
         <a href="{% url 'cancel_order' order_number=order.order_number %}" class="cancel-button" onclick="return confirm('Are you sure you want to cancel this order?')">Cancel Order</a>
-        {% endif %}
+    {% endif %}
+{% endif %}
+
+
     </div>
 
     <!-- Display refund information -->

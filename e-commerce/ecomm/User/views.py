@@ -143,7 +143,6 @@ def order_detail(request, order_number):
         order = Order.objects.get(order_number=order_number)
         order_items = OrderItem.objects.filter(order=order)
         
-        # Determine if the payment button should be shown
         can_continue_payment = (
             order.status == 'Pending' or 
             (order.status == 'Ordered' and order.payment_method == 'COD')
@@ -171,7 +170,9 @@ def cancel_order(request, order_number):
         # Restore product quantities
         for item in order.items.all():
             product = item.product
+            print(f"Before: {product.title} - Quantity: {product.quantity}")
             product.quantity += item.quantity
+            print(f"After: {product.title} - Quantity: {product.quantity}")
             product.save()
         
         # Process the refund if payment method is RazorPay

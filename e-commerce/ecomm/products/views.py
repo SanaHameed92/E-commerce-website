@@ -479,6 +479,7 @@ def place_order(request):
                 order_number=str(uuid.uuid4()),
                 status='Ordered',
                 payment_id=payment_id,
+                payment_status = 'Pending',
             )
 
             for item_data in cart_items_data:
@@ -511,25 +512,31 @@ def order_success(request, order_number):
     # Fetch the order using the order_number
     order = get_object_or_404(Order, order_number=order_number)
 
-    # Update the payment status to completed and order status to ordered if necessary
-    if order.payment_status == 'Pending':
-        order.payment_status = 'Completed'
-        order.status = 'Ordered'
-        order.save()
 
-        # Clear the cart for the user
-        cart_items = CartItem.objects.filter(cart__user=request.user)
-        cart_items.delete()
-        
-        # Decrement product quantities
-        for item in order.items.all():
-            product = item.product
-            if product.quantity >= item.quantity:
-                product.quantity -= item.quantity
-                product.save()
-            else:
-                # Handle the case where stock is insufficient, if needed
-                pass
+    if order.payment_method == 'RazorPay' and order.payment_status == 'Pending':
+            order.status = 'Ordered'
+            order.payment_status = 'Completed'
+            order.save()
+
+    # Update the payment status to completed and order status to ordered if necessary
+    # if order.payment_status == 'Pending':
+    #     order.payment_status = 'Completed'
+    #     order.status = 'Ordered'
+    #     order.save()
+
+    # Clear the cart for the user
+    cart_items = CartItem.objects.filter(cart__user=request.user)
+    cart_items.delete()
+    
+    # Decrement product quantities
+    for item in order.items.all():
+        product = item.product
+        if product.quantity >= item.quantity:
+            product.quantity -= item.quantity
+            product.save()
+        else:
+            # Handle the case where stock is insufficient, if needed
+            pass
 
     context = {
         'order': order,
@@ -703,7 +710,7 @@ def confirm_order_razorpay(request):
 
             elif order.payment_method == 'RazorPay':
                 order.payment_id = payment_id
-                order.payment_status = 'Completed'  # Assuming payment is successful
+                order.payment_status = 'Completed' 
                 order.status = 'Ordered'
                 order.save()
 
