@@ -38,15 +38,27 @@ $(document).ready(function () {
                             "csrfmiddlewaretoken": token,
                             "order_id": response.order_id
                         };
+                        console.log("Payment ID:", responseb.razorpay_payment_id);
                         $.ajax({
                             method: "POST",
                             url: "/products/confirm-order-razorpay/",
-                            data: data,
+                            headers: {
+                                'X-CSRFToken': token
+                            },
+                            data: JSON.stringify({
+                                "payment_id": responseb.razorpay_payment_id,
+                                "order_id": response.order_id
+                            }),
+                            contentType: "application/json", // Ensure content type is set correctly
                             success: function (responsec) {
                                 console.log("Confirm order response:", responsec); 
-                                swal("Congratulations!", responsec.status, "success").then((value) => {
-                                    window.location.href = '/products/order-success/' + responsec.order_number;
-                                });
+                                if (responsec.status === 'Order placed successfully') {
+                                    swal("Congratulations!", "Your order has been placed successfully.", "success").then((value) => {
+                                        window.location.href = '/products/order-success/' + responsec.order_number;
+                                    });
+                                } else {
+                                    swal("Payment Error", responsec.message, "error");
+                                }
                             },
                             error: function (xhr, status, error) {
                                 console.error("AJAX POST Request Failed:", xhr.responseText);
