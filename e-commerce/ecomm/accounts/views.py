@@ -1,11 +1,12 @@
 import decimal
+from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout as auth_logout
 from django.contrib.auth import login as auth_login
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from products.models import Brand, Color, Order, OrderItem, Product, Category,ProductImage, Size
-from products.forms import BrandForm, CategoryForm, ColorForm, ProductForm, ProductImageForm, SizeForm
+from products.models import Brand, Color, Order, OrderItem, Product, Category,ProductImage, Size, SubCategory
+from products.forms import BrandForm, CategoryForm, ColorForm, ProductForm, ProductImageForm, SizeForm, SubCategoryForm
 from .forms import AdminLoginForm, SignupForm, LoginForm
 from django.contrib.auth import get_user_model
 from django.conf import settings
@@ -345,7 +346,7 @@ def delete_category(request, pk):
         category.save()
         
         messages.success(request, 'Category status changed successfully.', extra_tags='product_update')
-        return redirect('admin_products')  # Redirect to the admin products page or appropriate view
+        return redirect('product_categories')  # Redirect to the admin products page or appropriate view
     
     return render(request, 'admin_side/confirm_delete_category.html', {'category': category})
 
@@ -375,12 +376,24 @@ def add_product(request):
             for image in additional_images:
                 ProductImage.objects.create(product=product, image=image, is_main=False)
 
+            messages.success(request, 'Product added successfully.')
             return redirect('admin_products')
 
     else:
         product_form = ProductForm()
 
+    # Populate subcategories based on the selected category
+    category_id = request.GET.get('category')
+    if category_id:
+        try:
+            subcategories = SubCategory.objects.filter(category_id=category_id)
+            product_form.fields['subcategories'].queryset = subcategories
+        except SubCategory.DoesNotExist:
+            product_form.fields['subcategories'].queryset = SubCategory.objects.none()
+
     return render(request, 'admin_side/add_products.html', {'product_form': product_form})
+
+
 
 
 def edit_category(request, pk):
@@ -414,6 +427,93 @@ def edit_brand(request, pk):
         form = BrandForm(instance=brand)
 
     return render(request, 'admin_side/edit_brand.html', {'form': form, 'brand': brand})
+
+def product_categories(request):
+    categories = Category.objects.all()
+    if request.method == 'POST':
+        form = CategoryForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Category added successfully.')
+            return redirect('product_categories')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = CategoryForm()
+    return render(request, 'admin_side/product_categories.html', {
+        'categories': categories,
+        'category_form': form
+    })
+
+def manage_subcategories(request, category_id):
+    category = get_object_or_404(Category, pk=category_id)
+    subcategories = SubCategory.objects.filter(category=category)
+    
+    if request.method == 'POST':
+        if 'subcategory_id' in request.POST:  # Check if we're updating an existing subcategory
+            subcategory_id = request.POST.get('subcategory_id')
+            subcategory = get_object_or_404(SubCategory, pk=subcategory_id)
+            form = SubCategoryForm(request.POST, instance=subcategory)
+        else:  # Adding a new subcategory
+            form = SubCategoryForm(request.POST)
+            form.instance.category = category  # Set the category from the context
+
+        if form.is_valid():
+            form.save()
+            return redirect('manage_subcategories', category_id=category_id)
+
+    else:
+        form = SubCategoryForm()
+
+    context = {
+        'category': category,
+        'subcategories': subcategories,
+        'subcategory_form': form,
+    }
+    
+    return render(request, 'admin_side/manage_subcategories.html', context)
+
+def edit_subcategory(request, pk):
+    subcategory = get_object_or_404(SubCategory, pk=pk)
+    if request.method == 'POST':
+        form = SubCategoryForm(request.POST, instance=subcategory)
+        if form.is_valid():
+            form.save()
+            return redirect('manage_subcategories', category_id=subcategory.category.id)
+    else:
+        form = SubCategoryForm(instance=subcategory)
+    
+    context = {
+        'form': form,
+        'subcategory': subcategory,
+    }
+    return render(request, 'admin_side/edit_subcategory.html', context)
+
+def delete_subcategory(request, pk):
+    subcategory = get_object_or_404(SubCategory, pk=pk)
+    if request.method == 'POST':
+        subcategory.delete()
+        return redirect('manage_subcategories', category_id=subcategory.category.id)
+    else:
+        # If not POST, redirect back to the manage subcategories page
+        return redirect('manage_subcategories', category_id=subcategory.category.id)
+
+def product_brands(request):
+    brands = Brand.objects.all()
+    if request.method == 'POST':
+        form = BrandForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Brand added successfully.')
+            return redirect('product_brands')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = BrandForm()
+    return render(request, 'admin_side/product_brands.html', {
+        'brands': brands,
+        'brand_form': form
+    })
 
 
 UserModel = get_user_model()

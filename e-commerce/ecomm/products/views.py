@@ -4,7 +4,7 @@ import json
 from django.utils import timezone
 import uuid
 from django.shortcuts import render, get_object_or_404
-from .models import Cart, CartItem, Coupon, Order, OrderItem, Product, Category, Brand, ProductVariant, Size, Color
+from .models import Cart, CartItem, Coupon, Order, OrderItem, Product, Category, Brand, ProductVariant, Size, Color, SubCategory
 from django.core.paginator import Paginator
 from django.shortcuts import render,redirect
 from django.urls import reverse
@@ -21,6 +21,7 @@ from django.views.decorators.csrf import csrf_exempt
 def shop(request):
     search_query = request.GET.get('search', '')
     category_names = request.GET.getlist('category')
+    subcategory_names = request.GET.getlist('subcategory')
     brand_names = request.GET.getlist('brand')
     colors = request.GET.getlist('color')
     sizes = request.GET.getlist('size')
@@ -37,13 +38,17 @@ def shop(request):
                                            Q(description__icontains=search_query) |
                                            Q(brand__brand_name__icontains=search_query)|
                                            Q(category__category_name__icontains=search_query)|
+                                           Q(subcategory__subcategory_name__icontains=search_query) |
                                            Q(colors__color_name__icontains=search_query) |
                                            Q(sizes__size_name__icontains=search_query)
                                         ).distinct()
 
-    # Apply category filter
+    # Apply category and subcategory filter together
     if category_names:
         product_list = product_list.filter(category__category_name__in=category_names).distinct()
+
+    if subcategory_names:
+        product_list = product_list.filter(subcategory__subcategory_name__in=subcategory_names).distinct()
 
     # Apply brand filter
     if brand_names:
@@ -95,7 +100,7 @@ def shop(request):
     product_list = product_paginator.get_page(page_number)
 
     # Fetch categories, brands, sizes, and colors
-    categories = Category.objects.filter(is_active=True)
+    categories = Category.objects.filter(is_active=True).prefetch_related('subcategories')
     brands = Brand.objects.filter(is_active=True)
     sizes = Size.objects.all()
     colors = Color.objects.all()
@@ -107,6 +112,7 @@ def shop(request):
         'sizes': sizes,
         'colors': colors,
         'selected_category': category_names,
+        'selected_subcategory': subcategory_names,
         'selected_brand': brand_names,
         'selected_color': colors,
         'selected_size': sizes,

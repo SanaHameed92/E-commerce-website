@@ -15,7 +15,7 @@ class Category(models.Model):
     description = models.TextField(max_length=255, blank=True)
     cat_image = models.ImageField(upload_to='photos/categories', blank=True)
     is_active = models.BooleanField(default=True)
-    category_offer = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, help_text=_('Discount percentage applied to all products under this category'))
+    category_offer = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, )
 
     class Meta:
         verbose_name = 'category'
@@ -24,12 +24,25 @@ class Category(models.Model):
     def __str__(self):
         return self.category_name
     
+class SubCategory(models.Model):
+    category = models.ForeignKey(Category, related_name='subcategories', on_delete=models.CASCADE)
+    subcategory_name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'SubCategory'
+        verbose_name_plural = 'SubCategories'
+        unique_together = ('category', 'subcategory_name')  # Ensure unique subcategory names within each category
+
+    def __str__(self):
+        return f"{self.subcategory_name} ({self.category.category_name})"
+    
 
 class Brand(models.Model):
     brand_name = models.CharField(max_length=255)   
     category = models.ManyToManyField(Category, related_name='brands')
     is_active = models.BooleanField(default=True)
-    brand_offer = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, help_text=_('Discount percentage applied to all products under this brand'))
+    brand_offer = models.DecimalField(max_digits=5, decimal_places=2, default=0.00,)
 
     def __str__(self):
         return self.brand_name
@@ -57,6 +70,7 @@ class Product(models.Model):
     title = models.CharField(max_length=100)
     original_price = models.DecimalField(max_digits=10, decimal_places=2)
     category = models.ForeignKey(Category, related_name='products', on_delete=models.CASCADE)
+    subcategory = models.ForeignKey(SubCategory, related_name='products', on_delete=models.SET_NULL, null=True, blank=True)
     brand = models.ForeignKey(Brand, related_name='products', on_delete=models.SET_NULL, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
     quantity = models.PositiveIntegerField(default=1)
