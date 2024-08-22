@@ -142,7 +142,7 @@
                         </div>
                         <div class="col-md-6 text-right">
                             <strong class="text-black">
-                                <span id="discount_amount">$0.00</span>
+                                <span id="discount_amount">0.00%</span>
                             </strong>
                         </div>
                     </div>
@@ -230,16 +230,16 @@
     
                     $('#grand_total').text('$' + newTotal.toFixed(2));
                     $('#applied_coupon').text(response.applied_coupon_code ? 'Coupon Code: ' + response.applied_coupon_code : '');
-                    $('#discount_amount').text(discount ? 'Discount Applied: $' + discount.toFixed(2) : 'Discount Applied: $0.00');
+                    $('#discount_amount').text(discount ? 'Discount Applied: ' + discount.toFixed(2) + '%' : 'Discount Applied: 0%');
                 } else {
                     $('#coupon_message').text(response.message);
-                    $('#discount_amount').text('Discount Applied: $0.00');
+                    $('#discount_amount').text('Discount Applied: 0%');
                 }
             },
             error: function(xhr, status, error) {
                 console.error("AJAX Error:", status, error);
                 $('#coupon_message').text("An error occurred. Please try again.");
-                $('#discount_amount').text('Discount Applied: $0.00');
+                $('#discount_amount').text('Discount Applied: 0%');
             }
         });
     }

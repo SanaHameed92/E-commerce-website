@@ -109,13 +109,7 @@
 </style>
 
 <div class="wishlist-container">
-    {% if messages_for_wishlist %}
-    <div class="alert-container">
-        {% for message in messages_for_wishlist %}
-            <div class="alert alert-{{ message.tags.split.0 }}">{{ message }}</div>
-        {% endfor %}
-    </div>
-    {% endif %}
+   
     <h2>My Wishlist</h2>
     {% if wishlist_items %}
     {% for item in wishlist_items %}

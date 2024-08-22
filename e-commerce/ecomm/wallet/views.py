@@ -47,6 +47,7 @@ def admin_confirm_return(request, return_request_id):
 
             # Update order status
             order.status = 'Returned'
+            order.payment_status = 'Refunded'
             order.save()
 
             # Get the user associated with the order

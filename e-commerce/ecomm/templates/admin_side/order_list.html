@@ -1,4 +1,4 @@
-{% extends 'admin_base.html'%}
+{% extends 'admin_base.html' %}
 {% load static %}
 {% block content %}
 <!DOCTYPE html>
@@ -32,6 +32,11 @@
             color: #dc3545; /* Red */
             font-weight: bold;
         }
+
+        .status-pending {
+            color: #ff5722; /* Gray */
+            font-weight: bold;
+        }
     </style>
     <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
     <script src="{% static 'js/bootstrap.min.js' %}"></script>
@@ -49,6 +54,7 @@
                     <th>Order Number</th>
                     <th>Customer</th>
                     <th>Payment Method</th>
+                    <th>Payment Status</th> <!-- Added Column -->
                     <th>Delivery Address</th>
                     <th>Delivery Charge</th>
                     <th>Total</th>
@@ -62,6 +68,17 @@
                     <td>{{ order.order_number }}</td>
                     <td>{{ order.user }}</td>
                     <td>{{ order.payment_method }}</td>
+                    <td>
+                        {% if order.payment_status == 'Pending' %}
+                            <span class="status-pending">{{ order.payment_status }}</span>
+                        {% elif order.payment_status == 'Completed' %}
+                            <span class="status-completed">{{ order.payment_status }}</span>
+                        {% elif order.payment_status == 'Failed' %}
+                            <span class="status-failed">{{ order.payment_status }}</span>
+                        {% else %}
+                            {{ order.payment_status }}
+                        {% endif %}
+                    </td>
                     <td>{{ order.address }}</td>
                     <td>${{ order.shipping_fee }}</td>
                     <td>${{ order.grand_total }}</td>
@@ -145,4 +162,4 @@
     </script>
 </body>
 </html>
-{%endblock%}
+{% endblock %}
