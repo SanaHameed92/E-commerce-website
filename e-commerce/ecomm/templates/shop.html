@@ -157,13 +157,26 @@
                             <h4 class="h6 text-uppercase text-black">Categories</h4>
                             {% for category in categories %}
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="category" value="{{ category.category_name }}" id="category_{{ category.id }}" {% if selected_category == category.category_name %}checked{% endif %}>
+                                    <input class="form-check-input" type="checkbox" name="category" value="{{ category.category_name }}" id="category_{{ category.id }}" {% if category.category_name in selected_category %}checked{% endif %}>
                                     <label class="form-check-label" for="category_{{ category.id }}">
                                         {{ category.category_name }}
                                     </label>
                                 </div>
+                                {% if category.subcategories.exists %}
+                                    <div class="ml-3">
+                                        {% for subcategory in category.subcategories.all %}
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="subcategory" value="{{ subcategory.subcategory_name }}" id="subcategory_{{ subcategory.id }}" {% if subcategory.subcategory_name in selected_subcategory %}checked{% endif %}>
+                                                <label class="form-check-label" for="subcategory_{{ subcategory.id }}">
+                                                    {{ subcategory.subcategory_name }}
+                                                </label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             {% endfor %}
                         </div>
+                        
 
                         <div class="mb-3">
                             <h4 class="h6 text-uppercase text-black">Brands</h4>
@@ -202,6 +215,7 @@
                         </div>
 
                         <button type="submit" class="btn btn-primary btn-block">Apply Filters</button>
+                        <a href="{% url 'product_page:shop' %}" class="btn btn-secondary btn-block mt-2">Clear Filters</a>
                     </div>
                 </form>
             </div>

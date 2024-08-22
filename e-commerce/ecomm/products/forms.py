@@ -1,7 +1,7 @@
 # products/forms.py
 
 from django import forms
-from .models import Coupon, Product, ProductImage, Category, Brand, ProductVariant, Size, Color
+from .models import Coupon, Product, ProductImage, Category, Brand, ProductVariant, Size, Color, SubCategory
 
 class ProductForm(forms.ModelForm):
     sizes = forms.ModelMultipleChoiceField(
@@ -14,13 +14,14 @@ class ProductForm(forms.ModelForm):
         widget=forms.CheckboxSelectMultiple,
         required=False
     )
+    
 
    
     
     class Meta:
         model = Product
         fields = [
-            'title', 'description', 'category', 'original_price','product_offer', 'rating', 'brand',
+            'title', 'description', 'category','subcategory', 'original_price','product_offer', 'rating', 'brand',
             'quantity','max_qty_per_person', 'trending', 'product_image','availability_status','sizes','colors','featured',
             
         ]
@@ -50,6 +51,16 @@ class CategoryForm(forms.ModelForm):
         if category_offer < 0 or category_offer >= 100:
             raise forms.ValidationError("Category offer must be between 0 and 100 percent.")
         return category_offer
+    
+class SubCategoryForm(forms.ModelForm):
+    class Meta:
+        model = SubCategory
+        fields = ['subcategory_name']
+        widgets = {
+            'subcategory_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter subcategory name'}),
+        }
+
+   
 
 class BrandForm(forms.ModelForm):
     class Meta:
