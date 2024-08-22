@@ -275,35 +275,35 @@ def checkout(request):
 
     # Handle coupon code
     if coupon_code:
+        print(f"Coupon code received: {coupon_code}")
         try:
             coupon = Coupon.objects.get(code=coupon_code)
+            print(f"Coupon found: {coupon}")
             coupon.update_status()  # Make sure this method updates coupon status
+            print(f"Coupon status after update: {coupon.status}")
+            
             if coupon.status == 'active':
                 discount = coupon.discount
                 discount_amount = (total * discount / 100)
                 applied_coupon_code = coupon_code
+                print(f"Discount applied: {discount_amount} (Discount: {discount}%)")
             else:
                 message = "Invalid or expired coupon code."
                 success = False
+                print(f"Message: {message}")
         except Coupon.DoesNotExist:
             message = "Coupon code does not exist."
             success = False
+            print(f"Message: {message}")
 
     if remove_coupon:
         discount_amount = Decimal('0.00')
         message = "Coupon removed successfully."
+        print(f"Discount amount after removal: {discount_amount}")
 
-    # Handle referral code
-    if referral_code:
-        try:
-            referral = Referral.objects.get(referral_code=referral_code)
-            if referral:
-                referral_discount_amount = Decimal('50.00')  # Assuming a fixed 50% discount for referrals
-        except Referral.DoesNotExist:
-            message = "Invalid referral code."
-            success = False
-
-    grand_total = total + shipping_fee - discount_amount - (total * referral_discount_amount / 100)
+    grand_total = total + shipping_fee - discount_amount
+    print(f"Total: {total}, Shipping Fee: {shipping_fee}, Discount Amount: {discount_amount}")
+    print(f"Grand Total: {grand_total}")
 
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         response_data = {

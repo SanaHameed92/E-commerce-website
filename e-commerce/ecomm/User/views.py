@@ -1,5 +1,6 @@
 #User/views.py
 from uuid import uuid4
+from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -226,11 +227,15 @@ def add_to_wishlist(request, product_id):
     wishlist_item, created = Wishlist.objects.get_or_create(user=request.user, product=product)
 
     if created:
-        messages.success(request, 'Product added to your wishlist.', extra_tags='wishlist')
+        message = 'Product added to your wishlist.'
+        messages.success(request, message, extra_tags='wishlist')
+        success = True
     else:
-        messages.info(request, 'Product is already in your wishlist.', extra_tags='wishlist')
+        message = 'Product is already in your wishlist.'
+        messages.info(request, message, extra_tags='wishlist')
+        success = False
 
-    return redirect('wishlist')
+    return JsonResponse({'success': success, 'message': message})
 
 def wishlist(request):
     try:

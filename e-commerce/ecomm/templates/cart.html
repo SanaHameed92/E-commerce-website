@@ -61,7 +61,9 @@
                                 <th class="product-name">Product</th>
                                 <th class="product-size">Size</th>
                                 <th class="product-color">Color</th>
-                                <th class="product-price">Price</th>
+                                <th class="product-original-price">Original Price</th>
+                                <th class="product-offer">Discount</th>
+                                <th class="product-offer">Best Offer</th>
                                 <th class="product-quantity">Quantity</th>
                                 <th class="product-total">Total</th>
                                 <th class="product-remove">Remove</th>
@@ -80,7 +82,16 @@
                                 </td>
                                 <td class="product-size">{{ item.size }}</td>
                                 <td class="product-color">{{ item.color }}</td>
-                                <td class="product-price">${{ item.offer_price|floatformat:2 }}</td>
+                                <td class="product-original-price">${{ item.product.original_price|floatformat:2 }}</td>
+                                <td class="product-offer">
+                                    {% if item.product.get_best_offer %}
+                                        <span class="text-success">Best Offer: {{ item.product.get_best_offer }}%</span>
+                                    {% else %}
+                                        <span class="text-muted">No Offer</span>
+                                    {% endif %}
+                                </td>
+                                
+                                <td class="product-offer">${{ item.product.offer_price|floatformat:2 }}</td>
                                 <td>
                                     <div class="input-group mb-3" style="max-width: 120px;">
                                         <input type="number" class="form-control quantity-input" data-item-id="{{ item.id }}" value="{{ item.quantity }}" min="1">

@@ -3,6 +3,7 @@
 {% load chunks %}
 
 {% block content %}
+
 <div class="bg-light py-3">
     <div class="container">
         <div class="row">
@@ -69,6 +70,7 @@
                                 </figure>
                                 <div class="block-4-text p-4">
                                     <h3><a href="{% url 'product_page:shop-single' product.id %}">{{ product.title }}</a></h3>
+                                    
                                     {% if product.description %}
                                     <p class="mb-0">{{ product.description }}</p>
                                     {% endif %}
@@ -105,9 +107,10 @@
                                     <p class="text-danger font-weight-bold">Out of Stock</p>
                                     {% endif %}
                                     <!-- Wishlist Button -->
-                                    <a href="{% url 'add_to_wishlist' product.id %}" class="btn btn-outline-danger btn-sm" title="Add to Wishlist">
+                                    <a href="{% url 'add_to_wishlist' product.id %}" class="btn btn-outline-danger btn-sm add-to-wishlist" title="Add to Wishlist" data-product-id="{{ product.id }}">
                                         <i class="fa fa-heart"></i>
                                     </a>
+                                    <div class="wishlist-message"></div>
                                 </div>
                             </div>
                         </div>
@@ -149,7 +152,6 @@
                         <h3 class="mb-3 h6 text-uppercase text-black d-block">Filters</h3>
 
                         <input type="text" name="search" value="{{ search_query }}" placeholder="Search products" class="form-control mb-4">
-
 
                         <div class="mb-3">
                             <h4 class="h6 text-uppercase text-black">Categories</h4>
@@ -199,18 +201,64 @@
                             {% endfor %}
                         </div>
 
-                        <div class="mb-3">
-                            <h4 class="h6 text-uppercase text-black">Price Range</h4>
-                            <input type="number" name="min_price" placeholder="Min Price" value="{{ min_price }}" class="form-control mb-2">
-                            <input type="number" name="max_price" placeholder="Max Price" value="{{ max_price }}" class="form-control">
-                        </div>
-
-                        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
-                        <a href="{% url 'product_page:shop' %}" class="btn btn-outline-secondary btn-sm">Clear All</a>
+                        <button type="submit" class="btn btn-primary btn-block">Apply Filters</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const buttons = document.querySelectorAll('.add-to-wishlist');
+
+    buttons.forEach(button => {
+        button.addEventListener('click', function (event) {
+            event.preventDefault();
+
+            const button = event.currentTarget;
+            const productId = button.getAttribute('data-product-id');
+            const productItem = button.closest('.product-item');
+
+            // Toggle the 'active' class to change the icon color
+            button.classList.toggle('active');
+
+            // Optionally: Make an AJAX request to add/remove the item from the wishlist
+            fetch(button.href, { method: 'GET' })
+                .then(response => response.json())
+                .then(data => {
+                    let messageElement = productItem.querySelector('.wishlist-message');
+                    if (!messageElement) {
+                        messageElement = document.createElement('div');
+                        messageElement.className = 'wishlist-message alert';
+                        productItem.appendChild(messageElement);
+                    }
+
+                    if (data.success) {
+                        messageElement.classList.remove('alert-danger');
+                        messageElement.classList.add('alert-success');
+                        messageElement.textContent = 'Product added to your wishlist.';
+                    } else {
+                        messageElement.classList.remove('alert-success');
+                        messageElement.classList.add('alert-danger');
+                        messageElement.textContent = 'Product already added to the wishlist';
+                    }
+
+                    // Hide the message after 3 seconds
+                    setTimeout(() => {
+                        messageElement.remove();
+                    }, 2000);
+                })
+                .catch(error => {
+                    // Handle errors
+                    console.error('Error:', error);
+                });
+        });
+    });
+});
+</script>
 {% endblock %}
