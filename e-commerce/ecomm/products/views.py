@@ -13,7 +13,7 @@ from django.contrib import messages
 from User.models import Address
 from django.db.models import Count
 from .forms import CouponForm, ProductVariantForm
-from wallet.models import Referral
+from wallet.models import Referral, WalletTransaction
 from django.db.models import Count, Q
 from django.views.decorators.csrf import csrf_exempt
 
@@ -380,6 +380,8 @@ def checkout(request):
             return redirect('product_page:razorpaycheck')
         elif payment_method == 'COD':
             return redirect('product_page:order_summary')
+        elif payment_method == 'Wallet':
+            return redirect('product_page:order_summary')  
         else:
             messages.error(request, "Invalid payment method selected.")
             return redirect('product_page:checkout')
@@ -457,9 +459,9 @@ def update_cart(request):
 def place_order(request):
     if request.method == 'POST':
         cart_items_data = request.session.get('cart_items', [])
-        total = request.session.get('total', 0)
-        shipping_fee = request.session.get('shipping_fee', 0)
-        grand_total = request.session.get('grand_total', 0)
+        total = Decimal(request.session.get('total', '0'))
+        shipping_fee = Decimal(request.session.get('shipping_fee', '0'))
+        grand_total = Decimal(request.session.get('grand_total', '0'))
         selected_address = request.session.get('selected_address', {})
         address_id = selected_address.get('id')
         payment_method = selected_address.get('payment_method')
@@ -475,6 +477,7 @@ def place_order(request):
                 if item_data['quantity'] <= 0:
                     return JsonResponse({'status': f"Invalid quantity for product {item_data['title']}."}, status=400)
 
+            # Create the order
             order = Order.objects.create(
                 user=request.user,
                 address=selected_address,
@@ -485,12 +488,11 @@ def place_order(request):
                 order_number=str(uuid.uuid4()),
                 status='Ordered',
                 payment_id=payment_id,
-                payment_status = 'Pending',
+                payment_status='Pending',
             )
 
             for item_data in cart_items_data:
                 product = Product.objects.get(title=item_data['title'])
-
                 if product.quantity < item_data['quantity']:
                     return JsonResponse({'status': f"Insufficient stock for product {product.title}."}, status=400)
 
@@ -498,18 +500,48 @@ def place_order(request):
                     order=order,
                     product=product,
                     quantity=item_data['quantity'],
-                    total_price=item_data['total_price']
+                    total_price=Decimal(item_data['total_price'])
                 )
 
+                # Update product quantity and popularity
                 product.quantity -= item_data['quantity']
                 product.popularity += item_data['quantity']
                 product.save()
 
+            # Clear the cart
             CartItem.objects.filter(cart__user=request.user).delete()
+
+            # Handle wallet payment
+            if payment_method == 'Wallet':
+                user = request.user
+                if user.wallet < grand_total:
+                    return JsonResponse({'status': "Insufficient wallet balance."}, status=400)
+
+                # Deduct the amount from the wallet
+                user.wallet -= grand_total
+                user.save()
+
+                # Create wallet transaction record
+                WalletTransaction.objects.create(
+                    user=user,
+                    transaction_type='Debit',
+                    amount=grand_total,
+                    description=f'Order #{order.order_number} payment'
+                )
+
+                # Update order status and payment status
+                order.wallet_credit = grand_total
+                order.payment_status = 'Completed'
+                order.save()
 
             return redirect('product_page:order_success', order_number=order.order_number)
 
+        except Address.DoesNotExist:
+            return JsonResponse({'status': "Selected address does not exist."}, status=400)
+        except Product.DoesNotExist:
+            return JsonResponse({'status': "Product does not exist."}, status=400)
         except Exception as e:
+            
             return JsonResponse({'status': f"An error occurred while placing the order: {e}"}, status=500)
 
 

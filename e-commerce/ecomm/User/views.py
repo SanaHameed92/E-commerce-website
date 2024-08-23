@@ -175,9 +175,29 @@ def cancel_order(request, order_number):
             product.quantity += item.quantity
             print(f"After: {product.title} - Quantity: {product.quantity}")
             product.save()
+
+        if order.payment_method == 'Wallet':
+            # Credit the wallet if payment was done with wallet
+            user = request.user
+            user.wallet += order.grand_total
+            user.save()
+            order.status = 'Cancelled'
+            order.payment_status = 'Refunded'
+            order.wallet_credit = order.grand_total  
+            order.save()
+            
+            # Log the wallet transaction
+            WalletTransaction.objects.create(
+                user=user,
+                transaction_type='Credit',
+                amount=order.grand_total,
+                description=f'Refund for cancelled order {order.order_number}'
+            )
+            
+            messages.success(request, "Order cancelled successfully! Refund credited to wallet.", extra_tags='order')
         
         # Process the refund if payment method is RazorPay
-        if order.payment_method == 'RazorPay':
+        elif order.payment_method == 'RazorPay':
             user = request.user
             user.wallet += order.grand_total
             user.save()
