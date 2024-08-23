@@ -1,0 +1,44 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Order Number</th>
+            <th>Requested At</th>
+            <th>Status</th>
+            <th>Admin Comment</th>
+            <th>Reason for Cancellation</th> 
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for request in requests %}
+        <tr>
+            <td>{{ request.order.order_number }}</td>
+            <td>{{ request.requested_at|date:"Y-m-d H:i" }}</td>
+            <td>{{ request.status }}</td>
+            <td>{{ request.admin_comment }}</td>
+            <td>{{ request.reason }}</td> 
+            <td>
+                <a href="{% url 'process_cancellation_request' request_id=request.id action='approve' %}" class="btn btn-success">Approve</a>
+                <a href="{% url 'process_cancellation_request' request_id=request.id action='reject' %}" class="btn btn-danger">Reject</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<div class="container">
+    {% if request.session.cancellation_details %}
+        <h3>Cancellation Request Details</h3>
+        <p><strong>Order Number:</strong> {{ request.session.cancellation_details.order_number }}</p>
+        <p><strong>Requested At:</strong> {{ request.session.cancellation_details.requested_at }}</p>
+        <p><strong>Status:</strong> {{ request.session.cancellation_details.status }}</p>
+        <p><strong>Admin Comment:</strong> {{ request.session.cancellation_details.admin_comment }}</p>
+        <p><strong>Reason for Cancellation:</strong> {{ request.session.cancellation_details.reason }}</p>
+    {% endif %}
+</div>
+
+{% endblock %}

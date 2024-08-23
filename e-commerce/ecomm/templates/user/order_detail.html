@@ -251,7 +251,40 @@
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
+    }.cancellation-status {
+        width: 250px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        color: #343a40;
+        font-size: 1rem;
+        position: absolute;
+        top: 100px;
+        right: 20px;
     }
+
+    .cancellation-status.accepted {
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+        color: #155724;
+    }
+
+    .cancellation-status.rejected {
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+        color: #721c24;
+    }
+    .hidden {
+    display: none;
+}
+
+.show {
+    display: block;
+}
+
+
+
 </style>
 
 <div class="container order-detail-container">
@@ -296,7 +329,11 @@
             {% if order.status == 'Delivered' and not order.return_request %}
                 <a href="{% url 'request_return' order_number=order.order_number %}" class="return-button" onclick="return confirm('Are you sure you want to request a return?')">Request Return</a>
             {% endif %}
+
+            
         </div>
+
+        
 
         <h2>Order Details</h2>
         <h3>Order Number: {{ order.order_number }}</h3>
@@ -312,6 +349,8 @@
         <p>Name: {{ order.address.first_name }} {{ order.address.last_name }}</p>
         <p>Address: {{ order.address.street_address }}, {{ order.address.city }}, {{ order.address.state }}, {{ order.address.country }} - {{ order.address.postal_code }}</p>
         <p>Phone: {{ order.address.phone_number }}</p>
+
+
 
         <h4>Items:</h4>
         <table class="order-items-table">
@@ -349,11 +388,18 @@
         {% endfor %}
 
         <a href="{% url 'my_orders' %}" class="back-button">Back to My Orders</a>
-        {% if order.status != 'Cancelled' and order.status != 'Delivered' and order.status != 'Pending' and not order.return_request %}
-    {% if order.payment_method != 'COD' or order.payment_status != 'Pending' %}
-        <a href="{% url 'cancel_order' order_number=order.order_number %}" class="cancel-button" onclick="return confirm('Are you sure you want to cancel this order?')">Cancel Order</a>
-    {% endif %}
+        
+{% if order.status != 'Cancelled' and order.status != 'Delivered' and order.status != 'Pending' and not order.return_request %}
+{% if order.payment_method != 'COD' or order.payment_status != 'Pending' %}
+    <a href="#" id="cancel-order-btn" class="cancel-button">Request Cancellation</a>
+    <form action="{% url 'request_cancel_order' order_number=order.order_number %}" method="post" id="cancel-order-form" class="hidden p-2">
+        {% csrf_token %}
+        <textarea id="reason-textarea" name="reason" rows="4" placeholder="Enter reason for cancellation..." required></textarea>
+        <button type="submit" class="btn btn-danger">Submit Cancellation</button>
+    </form>
 {% endif %}
+{% endif %}
+
 
 
     </div>
@@ -380,7 +426,11 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         var continuePaymentButton = document.getElementById('continue-payment-btn');
-        
+        var cancelOrderButton = document.getElementById('cancel-order-btn');
+        var cancelOrderForm = document.getElementById('cancel-order-form');
+        var reasonTextarea = document.getElementById('reason-textarea');
+
+        // Razorpay payment script
         if (continuePaymentButton) {
             continuePaymentButton.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -405,12 +455,28 @@
                         "color": "#3399cc"
                     }
                 };
-                
+
                 var rzp = new Razorpay(options);
                 rzp.open();
             });
-        }   
+        }
+
+        // Show/hide cancellation reason textarea
+        if (cancelOrderButton && cancelOrderForm) {
+            cancelOrderButton.addEventListener('click', function() {
+                if (cancelOrderForm.classList.contains('hidden')) {
+                    cancelOrderForm.classList.remove('hidden');
+                    cancelOrderForm.classList.add('show');
+                    cancelOrderButton.textContent = 'Cancel Request';
+                } else {
+                    cancelOrderForm.classList.remove('show');
+                    cancelOrderForm.classList.add('hidden');
+                    cancelOrderButton.textContent = 'Request Cancellation';
+                }
+            });
+        }
     });
 </script>
+
 
 {% endblock %}
