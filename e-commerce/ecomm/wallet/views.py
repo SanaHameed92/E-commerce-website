@@ -1,11 +1,12 @@
 from django.shortcuts import render
-from . models import Referral, WalletTransaction
+from . models import CancellationRequest, Referral, WalletTransaction
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from .models import Order, ReturnRequest
 from django.db.models import F
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import user_passes_test
 
 # Create your views here.
 def my_wallet(request):
@@ -111,3 +112,81 @@ def referral_page(request):
         'friends': friends,
     }
     return render(request, 'user/referral.html', context)
+
+
+
+def request_cancel_order(request, order_number):
+    if request.method == 'POST':
+        reason = request.POST.get('reason')
+        
+        # Fetch the order for the current user
+        order = get_object_or_404(Order, order_number=order_number, user=request.user)
+        
+        if order.status != 'Cancelled' or order.status != 'Delivered':
+            # Create a cancellation request
+            cancellation_request, created = CancellationRequest.objects.get_or_create(order=order)
+            if created:
+                cancellation_request.reason = reason
+                cancellation_request.status = 'Pending'
+                cancellation_request.save()
+                messages.success(request, "Cancellation request submitted successfully. The admin will review it.")
+            else:
+                messages.info(request, "A cancellation request for this order already exists.")
+        else:
+            messages.info(request, "Order is already cancelled.")
+    
+    return redirect('order_detail', order_number=order_number)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def review_cancellation_requests(request):
+    requests = CancellationRequest.objects.filter(status='Pending')
+    return render(request, 'admin_side/review_cancellation_requests.html', {'requests': requests})
+
+@user_passes_test(lambda u: u.is_superuser)
+def process_cancellation_request(request, request_id, action):
+    cancellation_request = get_object_or_404(CancellationRequest, id=request_id)
+    order = cancellation_request.order
+
+    if action == 'approve':
+        order.status = 'Cancelled'
+        cancellation_request.status ="Confirmed"
+        order.save()
+
+        # Restore product quantities
+        for item in order.items.all():
+            product = item.product
+            product.quantity += item.quantity
+            product.save()
+
+        # Process the wallet refund
+        user = order.user
+        user.wallet += order.grand_total
+        user.save()
+
+        # Log the wallet transaction
+        WalletTransaction.objects.create(
+            user=user,
+            transaction_type='Credit',
+            amount=order.grand_total,
+            description=f'Refund for cancelled order {order.order_number}'
+        )
+        
+        messages.success(request, "Cancellation request approved and order cancelled.")
+    elif action == 'reject':
+        cancellation_request.status = 'Rejected'
+        messages.success(request, "Cancellation request rejected.")
+    
+    cancellation_request.status = action.capitalize()
+    cancellation_request.save()
+
+    # Store details in the session to display after redirect
+    request.session['cancellation_details'] = {
+        'order_number': order.order_number,
+        'requested_at': cancellation_request.requested_at.strftime("%Y-%m-%d %H:%M"),
+        'status': cancellation_request.status,
+        'admin_comment': cancellation_request.admin_comment,
+        'reason': cancellation_request.reason,
+    }
+
+    return redirect('review_cancellation_requests')

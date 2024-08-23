@@ -14,7 +14,7 @@ from products.models import Order, OrderItem, Product
 from django.views.decorators.http import require_POST
 from django.db.models import Count
 from django.core.exceptions import MultipleObjectsReturned
-from wallet.models import WalletTransaction
+from wallet.models import CancellationRequest, WalletTransaction
 
 User = get_user_model()
 
@@ -142,7 +142,11 @@ def delete_order(request, order_number):
 def order_detail(request, order_number):
     try:
         order = Order.objects.get(order_number=order_number)
+        print(f"Order found: {order}") 
+      
+        cancellation_request = CancellationRequest.objects.filter(order=order).first()
         order_items = OrderItem.objects.filter(order=order)
+        print(f"Cancellation Request found: {cancellation_request}")
         
         can_continue_payment = (
             order.status == 'Pending' or 
@@ -155,6 +159,7 @@ def order_detail(request, order_number):
         'order': order,
         'order_items': order_items,
         'can_continue_payment': can_continue_payment,
+        'cancellation_request': cancellation_request,
     }
     return render(request, 'user/order_detail.html', context)
 

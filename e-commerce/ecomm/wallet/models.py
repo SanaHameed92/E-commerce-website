@@ -61,3 +61,19 @@ class Referral(models.Model):
             code = f"{username_part}{random_part}"
             if not Referral.objects.filter(referral_code=code).exists():
                 return code
+            
+class CancellationRequest(models.Model):
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Confirmed', 'Confirmed'),
+        ('Rejected', 'Rejected'),
+    ]
+
+    order = models.OneToOneField(Order, on_delete=models.CASCADE)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Pending')
+    admin_comment = models.TextField(blank=True, null=True)
+    reason = models.TextField()  
+
+    def __str__(self):
+        return f"Cancellation Request for Order {self.order.order_number} - {self.status}"
