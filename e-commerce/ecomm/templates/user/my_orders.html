@@ -17,6 +17,7 @@
                         <th>Order Number</th>
                         <th>Date</th>
                         <th>Status</th>
+                        <th>Payment Status</th>  <!-- Added column for payment status -->
                         <th>Total</th>
                         <th>Payment Method</th>
                         <th>Actions</th>
@@ -36,6 +37,19 @@
                                 <span class="status-cancelled">{{ order.status }}</span>
                             {% else %}
                                 {{ order.status }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if order.payment_status == 'Pending' %}
+                                <span class="payment-status-pending">{{ order.payment_status }}</span>
+                            {% elif order.payment_status == 'Completed' %}
+                                <span class="payment-status-completed">{{ order.payment_status }}</span>
+                            {% elif order.payment_status == 'Failed' %}
+                                <span class="payment-status-failed">{{ order.payment_status }}</span>
+                            {% elif order.payment_status == 'Refunded' %}
+                                <span class="payment-status-refunded">{{ order.payment_status }}</span>
+                            {% else %}
+                                {{ order.payment_status }}
                             {% endif %}
                         </td>
                         <td class="total-amount">${{ order.grand_total|floatformat:2 }}</td>

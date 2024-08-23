@@ -52,6 +52,11 @@
                                 <label for="cod">Cash on Delivery</label>
                                 <span class="text-muted" style="margin-left: 8px;"><small>-Applicable for orders Rs 1000 or less.</small></span>
                             </div>
+                            <div>
+                                <input type="radio" id="wallet" name="payment_method" value="Wallet" class="mr-2" onclick="togglePaymentButton('wallet')" required>
+                                <label for="wallet">Wallet</label>
+                                <span class="text-muted" style="margin-left: 8px;"><small>-Your current balance: Rs {{ user.wallet }}</small></span>
+                            </div>
                         </div>
                 </div>
 
@@ -172,6 +177,8 @@
                 <div class="col-md-12 text-center">
                     <button type="submit" class="btn btn-primary btn py-3 payment-button" id="payWithCOD" style="display: none;">Place Order with COD</button>
                     <button type="button" class="btn btn-primary payWithRazorpay btn py-3 payment-button" id="payWithRazorpay" style="display: none;">Place Order with RazorPay</button>
+                    <button type="button" class="btn btn-primary btn py-3 payment-button" id="payWithWallet" style="display: none;">Place Order with Wallet</button>
+
                 </div>
             </div>
         </form>
@@ -190,6 +197,8 @@
             document.getElementById('payWithRazorpay').style.display = 'inline-block';
         } else if (paymentMethod === 'cod') {
             document.getElementById('payWithCOD').style.display = 'inline-block';
+        }else if (paymentMethod === 'wallet') {
+            document.getElementById('payWithWallet').style.display = 'inline-block';
         }
     }
 
@@ -207,6 +216,12 @@
         event.preventDefault(); // Prevent form submission initially
         // Add your RazorPay payment integration code here
         document.getElementById('checkout-form').submit(); // Submit the form manually
+    });
+
+    document.getElementById('payWithWallet').addEventListener('click', function(event) {
+        event.preventDefault();
+        // Add any wallet-specific logic here if needed
+        document.getElementById('checkout-form').submit();
     });
 
     function applyCoupon() {
