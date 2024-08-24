@@ -160,6 +160,7 @@ def order_detail(request, order_number):
         'order_items': order_items,
         'can_continue_payment': can_continue_payment,
         'cancellation_request': cancellation_request,
+        'discount_amount': order.discount_amount,
     }
     return render(request, 'user/order_detail.html', context)
 
@@ -172,6 +173,7 @@ def cancel_order(request, order_number):
     if order.status != 'Cancelled':
         # Update the status to 'Cancelled'
         order.status = 'Cancelled'
+       
         
         # Restore product quantities
         for item in order.items.all():
@@ -187,8 +189,8 @@ def cancel_order(request, order_number):
             user.wallet += order.grand_total
             user.save()
             order.status = 'Cancelled'
-            order.payment_status = 'Refunded'
             order.wallet_credit = order.grand_total  
+            order.payment_status = 'Refunded'
             order.save()
             
             # Log the wallet transaction
@@ -206,7 +208,8 @@ def cancel_order(request, order_number):
             user = request.user
             user.wallet += order.grand_total
             user.save()
-            order.wallet_credit = order.grand_total  # Record the amount credited
+            order.wallet_credit = order.grand_total 
+            order.payment_status = 'Refunded' 
             order.save()
             
             # Log the wallet transaction
@@ -239,6 +242,20 @@ def update_order_status(request):
         order_id = request.POST.get('order_id')
         new_status = request.POST.get('status')
         order = get_object_or_404(Order, id=order_id)
+        valid_statuses = ['Ordered', 'Shipped', 'Delivered', 'Cancelled', 'Refunded']
+        if new_status not in valid_statuses:
+            messages.error(request, "Invalid status update.")
+            return redirect('order_list')
+        
+        # Implement custom logic for certain statuses
+        if new_status == 'Cancelled':
+            # Handle cancellation logic, e.g., refunds, inventory updates, etc.
+            pass
+        elif new_status == 'Delivered' and order.payment_method == 'COD':
+            # Handle logic for delivered status, e.g., payment confirmation
+            if order.status == 'Ordered' and order.payment_method == 'COD':
+                order.payment_status='Completed'
+            pass
         order.status = new_status
         order.save()
     return redirect('order_list')

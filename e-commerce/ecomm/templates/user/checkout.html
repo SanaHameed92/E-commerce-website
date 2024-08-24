@@ -287,39 +287,7 @@
         });
     }
 
-    function applyReferral() {
-        var referralCode = document.getElementById('referral_code').value;
-        var csrfToken = '{{ csrf_token }}';
-        $.ajax({
-            type: 'POST',
-            url: '{% url "product_page:checkout" %}',
-            data: {
-                'referral_code': referralCode,
-                'csrfmiddlewaretoken': csrfToken
-            },
-            success: function(response) {
-                console.log("Response:", response);
-
-                if (response.success) {
-                    $('#referral_message').text("Referral applied successfully.");
-                    
-                    var newTotal = parseFloat(response.new_total);
-                    var referralDiscount = parseFloat(response.referral_discount_amount);
-
-                    $('#grand_total').text('$' + newTotal.toFixed(2));
-                    $('#referral_discount').text('Referral Discount Applied: $' + referralDiscount.toFixed(2));
-                } else {
-                    $('#referral_message').text(response.message);
-                    $('#referral_discount').text('Referral Discount Applied: $0.00');
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error("AJAX Error:", status, error);
-                $('#referral_message').text("An error occurred. Please try again.");
-                $('#referral_discount').text('Referral Discount Applied: $0.00');
-            }
-        });
-    }
+   
 </script>
     
 

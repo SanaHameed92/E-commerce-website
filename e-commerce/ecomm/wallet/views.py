@@ -150,6 +150,7 @@ def process_cancellation_request(request, request_id, action):
 
     if action == 'approve':
         order.status = 'Cancelled'
+        order.payment_status = 'Refunded'
         cancellation_request.status ="Confirmed"
         order.save()
 
