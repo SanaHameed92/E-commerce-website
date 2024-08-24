@@ -48,6 +48,12 @@
             margin-top: 30px;
             text-align: center;
         }
+        .coupon {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+        }
     </style>
 </head>
 <body>
@@ -83,18 +89,29 @@
                 <tr>
                     <td>{{ item.product.title }}</td>
                     <td>{{ item.quantity }}</td>
-                    <td>${{ item.product.original_price|floatformat:2 }}</td> <!-- Original Price -->
+                    <td>${{ item.product.original_price|floatformat:2 }}</td> 
                     <td>{{ item.product.get_best_offer }}%</td>
-                    <td>${{ item.product.offer_price|floatformat:2 }}</td> <!-- Offer Price -->
+                    <td>${{ item.product.offer_price|floatformat:2 }}</td> 
                     <td>${{ item.total_price|floatformat:2 }}</td>
                 </tr>
                 {% endfor %}
+                
             </tbody>
         </table>
+
+        
 
         <div class="total">
             <p>Subtotal: ${{ order.total_amount|floatformat:2 }}</p>
             <p>Delivery Charge: ${{ order.shipping_fee|floatformat:2 }}</p>
+            <p>
+                Coupon discount:
+                {% if order.coupon %}
+                    -{{ order.coupon.discount|floatformat:2 }}%
+                {% else %}
+                    None
+                {% endif %}
+            </p>
             <p><strong>Grand Total: ${{ order.grand_total|floatformat:2 }}</strong></p>
         </div>
 

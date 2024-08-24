@@ -327,7 +327,12 @@
             {% endif %}
 
             {% if order.status == 'Delivered' and not order.return_request %}
-                <a href="{% url 'request_return' order_number=order.order_number %}" class="return-button" onclick="return confirm('Are you sure you want to request a return?')">Request Return</a>
+                <a href="#" id="request-return-btn" class="return-button">Request Return</a>
+                <form action="{% url 'request_return' order_number=order.order_number %}" method="post" id="return-request-form" class="hidden p-2">
+                    {% csrf_token %}
+                    <textarea id="reason-textarea" name="reason" rows="4" placeholder="Enter reason for return..." required></textarea>
+                    <button type="submit" class="btn btn-success">Submit Return Request</button>
+                </form>
             {% endif %}
 
             
@@ -341,6 +346,7 @@
         <p class="{% if order.status == 'Ordered' %}status-ordered{% elif order.status == 'Shipped' %}status-shipped{% elif order.status == 'Delivered' %}status-delivered{% elif order.status == 'Cancelled' %}status-cancelled{% elif order.status == 'Returned' %}status-returned{% elif order.status == 'Pending' %}status-pending{% endif %}">
             Status: {{ order.status }}
         </p>
+        
         <p>Total: ${{ order.grand_total|floatformat:2 }}</p>
         <p>Payment Method: {{ order.payment_method }}</p>
         <p>Payment Status: {{ order.payment_status }}</p> 
@@ -390,14 +396,17 @@
         <a href="{% url 'my_orders' %}" class="back-button">Back to My Orders</a>
         
 {% if order.status != 'Cancelled' and order.status != 'Delivered' and order.status != 'Pending' and not order.return_request %}
-{% if order.payment_method != 'COD' or order.payment_status != 'Pending' %}
-    <a href="#" id="cancel-order-btn" class="cancel-button">Request Cancellation</a>
-    <form action="{% url 'request_cancel_order' order_number=order.order_number %}" method="post" id="cancel-order-form" class="hidden p-2">
-        {% csrf_token %}
-        <textarea id="reason-textarea" name="reason" rows="4" placeholder="Enter reason for cancellation..." required></textarea>
-        <button type="submit" class="btn btn-danger">Submit Cancellation</button>
-    </form>
-{% endif %}
+    {% if order.payment_method != 'COD' or order.payment_status != 'Pending' %}
+        <a href="#" id="cancel-order-btn" class="cancel-button">Request Cancellation</a>
+        <form action="{% url 'request_cancel_order' order_number=order.order_number %}" method="post" id="cancel-order-form" class="hidden p-2">
+            {% csrf_token %}
+            <textarea id="reason-textarea" name="reason" rows="4" placeholder="Enter reason for cancellation..." required></textarea>
+            <button type="submit" class="btn btn-danger">Submit Cancellation</button>
+        </form>
+
+    {% endif %}
+
+
 {% endif %}
 
 
@@ -428,7 +437,8 @@
         var continuePaymentButton = document.getElementById('continue-payment-btn');
         var cancelOrderButton = document.getElementById('cancel-order-btn');
         var cancelOrderForm = document.getElementById('cancel-order-form');
-        var reasonTextarea = document.getElementById('reason-textarea');
+        var returnRequestButton = document.getElementById('request-return-btn');
+        var returnRequestForm = document.getElementById('return-request-form');
 
         // Razorpay payment script
         if (continuePaymentButton) {
@@ -475,8 +485,25 @@
                 }
             });
         }
+
+        // Show/hide return request form
+        if (returnRequestButton && returnRequestForm) {
+            returnRequestButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (returnRequestForm.classList.contains('hidden')) {
+                    returnRequestForm.classList.remove('hidden');
+                    returnRequestForm.classList.add('show');
+                    returnRequestButton.textContent = 'Cancel Return Request';
+                } else {
+                    returnRequestForm.classList.remove('show');
+                    returnRequestForm.classList.add('hidden');
+                    returnRequestButton.textContent = 'Request Return';
+                }
+            });
+        }
     });
 </script>
+
 
 
 {% endblock %}

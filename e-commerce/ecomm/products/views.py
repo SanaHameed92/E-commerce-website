@@ -281,35 +281,38 @@ def checkout(request):
 
     # Handle coupon code
     if coupon_code:
-        print(f"Coupon code received: {coupon_code}")
+        #print(f"Coupon code received: {coupon_code}")
         try:
             coupon = Coupon.objects.get(code=coupon_code)
-            print(f"Coupon found: {coupon}")
+            #print(f"Coupon found: {coupon}")
             coupon.update_status()  # Make sure this method updates coupon status
-            print(f"Coupon status after update: {coupon.status}")
-            
+            #print(f"Coupon status after update: {coupon.status}")
+            coupon.save()
             if coupon.status == 'active':
                 discount = coupon.discount
                 discount_amount = (total * discount / 100)
                 applied_coupon_code = coupon_code
-                print(f"Discount applied: {discount_amount} (Discount: {discount}%)")
+                #print(f"Discount applied: {discount_amount} (Discount: {discount}%)")
+                request.session['applied_coupon_code'] = applied_coupon_code
+
             else:
                 message = "Invalid or expired coupon code."
                 success = False
-                print(f"Message: {message}")
+                #print(f"Message: {message}")
         except Coupon.DoesNotExist:
             message = "Coupon code does not exist."
             success = False
-            print(f"Message: {message}")
+            #print(f"Message: {message}")
 
     if remove_coupon:
+        request.session['applied_coupon_code'] = None
         discount_amount = Decimal('0.00')
         message = "Coupon removed successfully."
-        print(f"Discount amount after removal: {discount_amount}")
+        #print(f"Discount amount after removal: {discount_amount}")
 
     grand_total = total + shipping_fee - discount_amount
-    print(f"Total: {total}, Shipping Fee: {shipping_fee}, Discount Amount: {discount_amount}")
-    print(f"Grand Total: {grand_total}")
+    #print(f"Total: {total}, Shipping Fee: {shipping_fee}, Discount Amount: {discount_amount}")
+    #print(f"Grand Total: {grand_total}")
 
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         response_data = {
@@ -401,28 +404,7 @@ def checkout(request):
 
 
 
-def order_summary(request):
-    cart_items = request.session.get('cart_items', [])
-    total = request.session.get('total', 0)
-    shipping_fee = request.session.get('shipping_fee', 0)
-    grand_total = request.session.get('grand_total', 0)
-    selected_address = request.session.get('selected_address', {})
 
-    # Extract address details
-    formatted_address = selected_address.get('address', 'No address selected')
-    payment_method = selected_address.get('payment_method', 'Not Provided')
-    
-
-    context = {
-        'cart_items': cart_items,
-        'total': total,
-        'shipping_fee': shipping_fee,
-        'grand_total': grand_total,
-        'formatted_address': formatted_address,
-        'payment_method': payment_method,
-    }
-
-    return render(request, 'user/order_summary.html', context)
 
 
 def update_cart(request):
@@ -455,9 +437,9 @@ def update_cart(request):
 
     return JsonResponse({'success': False, 'error_message': 'Invalid request method'}, status=405)
 
-
 def place_order(request):
     if request.method == 'POST':
+        # Retrieve session data
         cart_items_data = request.session.get('cart_items', [])
         total = Decimal(request.session.get('total', '0'))
         shipping_fee = Decimal(request.session.get('shipping_fee', '0'))
@@ -466,12 +448,34 @@ def place_order(request):
         address_id = selected_address.get('id')
         payment_method = selected_address.get('payment_method')
         payment_id = request.POST.get('payment_id')
+        coupon_code = request.session.get('applied_coupon_code', None)
+
+        # Debugging #prints
+        #print(f"Cart Items Data: {cart_items_data}")
+        #print(f"Total: {total}, Shipping Fee: {shipping_fee}, Grand Total: {grand_total}")
+        #print(f"Selected Address ID: {address_id}")
+        #print(f"Payment Method: {payment_method}")
+        #print(f"Payment ID: {payment_id}")
+        #print(f"Coupon Code from Session: {coupon_code}")
 
         if not cart_items_data or not address_id:
             return JsonResponse({'status': "Incomplete order details"}, status=400)
 
         try:
             selected_address = Address.objects.get(id=address_id)
+            #print(f"Selected Address: {selected_address}")
+
+            coupon = None
+
+            if coupon_code:
+                try:
+                    coupon = Coupon.objects.get(code=coupon_code)
+                    #print(f"Found Coupon: {coupon}")
+                except Coupon.DoesNotExist:
+                    coupon = None
+                    #print(f"Coupon not found for code: {coupon_code}")
+
+            #print(f"Coupon being applied: {coupon}")
 
             for item_data in cart_items_data:
                 if item_data['quantity'] <= 0:
@@ -489,10 +493,14 @@ def place_order(request):
                 status='Ordered',
                 payment_id=payment_id,
                 payment_status='Pending',
+                coupon=coupon if coupon else None
             )
+            #print(f"Order created: {order}")
 
             for item_data in cart_items_data:
                 product = Product.objects.get(title=item_data['title'])
+                #print(f"Processing product: {product.title}, Quantity: {item_data['quantity']}")
+
                 if product.quantity < item_data['quantity']:
                     return JsonResponse({'status': f"Insufficient stock for product {product.title}."}, status=400)
 
@@ -507,13 +515,17 @@ def place_order(request):
                 product.quantity -= item_data['quantity']
                 product.popularity += item_data['quantity']
                 product.save()
+                #print(f"Updated product stock and popularity: {product.title}")
 
             # Clear the cart
             CartItem.objects.filter(cart__user=request.user).delete()
+            #print(f"Cart cleared for user: {request.user}")
 
             # Handle wallet payment
             if payment_method == 'Wallet':
                 user = request.user
+                #print(f"User wallet balance before payment: {user.wallet}")
+
                 if user.wallet < grand_total:
                     return JsonResponse({'status': "Insufficient wallet balance."}, status=400)
 
@@ -534,15 +546,43 @@ def place_order(request):
                 order.payment_status = 'Completed'
                 order.save()
 
+                #print(f"Wallet payment processed. Order updated: {order}")
+
             return redirect('product_page:order_success', order_number=order.order_number)
 
         except Address.DoesNotExist:
+            #print(f"Address with ID {address_id} does not exist.")
             return JsonResponse({'status': "Selected address does not exist."}, status=400)
         except Product.DoesNotExist:
+            #print(f"Product does not exist.")
             return JsonResponse({'status': "Product does not exist."}, status=400)
         except Exception as e:
-            
+            #print(f"An error occurred while placing the order: {e}")
             return JsonResponse({'status': f"An error occurred while placing the order: {e}"}, status=500)
+        
+
+def order_summary(request):
+    cart_items = request.session.get('cart_items', [])
+    total = request.session.get('total', 0)
+    shipping_fee = request.session.get('shipping_fee', 0)
+    grand_total = request.session.get('grand_total', 0)
+    selected_address = request.session.get('selected_address', {})
+
+    # Extract address details
+    formatted_address = selected_address.get('address', 'No address selected')
+    payment_method = selected_address.get('payment_method', 'Not Provided')
+    
+
+    context = {
+        'cart_items': cart_items,
+        'total': total,
+        'shipping_fee': shipping_fee,
+        'grand_total': grand_total,
+        'formatted_address': formatted_address,
+        'payment_method': payment_method,
+    }
+
+    return render(request, 'user/order_summary.html', context)
 
 
 
@@ -567,14 +607,14 @@ def order_success(request, order_number):
     cart_items.delete()
     
     # Decrement product quantities
-    for item in order.items.all():
-        product = item.product
-        if product.quantity >= item.quantity:
-            product.quantity -= item.quantity
-            product.save()
-        else:
-            # Handle the case where stock is insufficient, if needed
-            pass
+    # for item in order.items.all():
+    #     product = item.product
+    #     if product.quantity >= item.quantity:
+    #         product.quantity -= item.quantity
+    #         product.save()
+    #     else:
+    #         # Handle the case where stock is insufficient, if needed
+    #         pass
 
     context = {
         'order': order,
@@ -663,18 +703,49 @@ def delete_product_variant(request, pk):
 def razorpaycheck(request):
     if request.method == "POST":
         try:
+            #print("Received POST request in razorpaycheck")
+
             data = json.loads(request.body)
+            #print("Parsed JSON data:", data)
+
             selected_address = data.get('selected_address')
             payment_method = data.get('payment_method')
+            #print(f"Selected Address: {selected_address}, Payment Method: {payment_method}")
 
             cart = Cart.objects.filter(user=request.user).first()
             total_price = sum(item.total_price for item in CartItem.objects.filter(cart=cart))
             shipping_fee = 50 if total_price <= 350 else 0
-            grand_total = total_price + shipping_fee
+            #print(f"Total Price: {total_price}, Shipping Fee: {shipping_fee}")
+
+            coupon_code = request.session.get('applied_coupon_code', None)
+            #print(f"Coupon Code from Session: {coupon_code}")
+
+            discount_amount = Decimal('0.00')
+            coupon = None
+            if coupon_code:
+                try:
+                    coupon = Coupon.objects.get(code=coupon_code)
+                    if coupon.status == 'active':
+                        discount_amount = total_price * coupon.discount / 100
+                        #print(f"Coupon Applied: {coupon_code}, Discount Amount: {discount_amount}")
+                    else:
+                        # If coupon is inactive, clear it from the session
+                        request.session.pop('applied_coupon_code', None)
+                        #print(f"Coupon code {coupon_code} is inactive. Clearing coupon.")
+                except Coupon.DoesNotExist:
+                    # If coupon does not exist, clear it from the session
+                    request.session.pop('applied_coupon_code', None)
+                    #print(f"Coupon code {coupon_code} does not exist. Clearing coupon.")
+
+
+            grand_total = total_price + shipping_fee - discount_amount
+            #print(f"Grand Total after discount: {grand_total}")
+
+            
 
             address = Address.objects.filter(user=request.user).first()
-
             if not address:
+                #print("No address found for the user")
                 return JsonResponse({'error': 'No address found for the user'}, status=400)
 
             order = Order.objects.create(
@@ -686,7 +757,9 @@ def razorpaycheck(request):
                 grand_total=grand_total,
                 order_number=str(uuid.uuid4()),
                 status='Pending',
+                coupon=coupon  # Set coupon if valid, else None
             )
+            #print(f"Order created with ID: {order.order_number}")
 
             cart_items = CartItem.objects.filter(cart=cart)
             for cart_item in cart_items:
@@ -696,8 +769,10 @@ def razorpaycheck(request):
                     quantity=cart_item.quantity,
                     total_price=cart_item.total_price,
                 )
+                #print(f"Added item to order: Product {cart_item.product.title}, Quantity: {cart_item.quantity}")
 
-            
+            request.session.pop('applied_coupon_code', None)
+            #print("Cleared coupon code from session after order placement")
 
             return JsonResponse({
                 'total_price': grand_total,
@@ -705,78 +780,97 @@ def razorpaycheck(request):
                 'email': request.user.email,
                 'phone_number': request.user.phone_number,
                 'order_id': order.order_number,
+                
             })
         except json.JSONDecodeError:
+            #print("Invalid JSON")
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
         except Exception as e:
+            #print(f"An error occurred: {str(e)}")
             return JsonResponse({'error': str(e)}, status=500)
 
+    #print("Invalid request method")
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
 
 def confirm_order_razorpay(request):
     if request.method == 'POST':
         try:
+            #print("Received POST request in confirm_order_razorpay")
+
             data = json.loads(request.body)
             order_number = data.get('order_id')
             payment_id = data.get('payment_id')
+            #print(f"Order ID: {order_number}, Payment ID: {payment_id}")
 
             order = get_object_or_404(Order, order_number=order_number)
+            #print(f"Found order: {order.order_number}")
 
             if order.payment_method == 'COD':
-                # Update payment status to Completed for COD
                 order.payment_status = 'Completed'
                 order.save()
+                #print(f"COD payment completed for order {order.order_number}")
 
-                # Handle stock and cart operations
                 cart_items = CartItem.objects.filter(cart__user=request.user)
                 for cart_item in cart_items:
                     product = cart_item.product
                     if product.quantity < cart_item.quantity:
+                        #print(f"Insufficient stock for product {product.title}")
                         return JsonResponse({'status': f"Insufficient stock for product {product.title}."}, status=400)
                     product.quantity -= cart_item.quantity
                     product.popularity += cart_item.quantity
                     product.save()
+                    #print(f"Updated product stock and popularity: {product.title}")
 
                     OrderItem.objects.update_or_create(
                         order=order,
                         product=product,
                         defaults={'quantity': cart_item.quantity, 'total_price': cart_item.total_price}
                     )
+                    #print(f"Updated or created order item for product: {product.title}")
 
                 cart_items.delete()
                 return JsonResponse({'status': 'Order placed successfully', 'order_number': order.order_number})
 
             elif order.payment_method == 'RazorPay':
                 order.payment_id = payment_id
-                order.payment_status = 'Completed' 
+                order.payment_status = 'Completed'
                 order.status = 'Ordered'
                 order.save()
+                #print(f"RazorPay payment completed for order {order.order_number}")
 
-                # Handle stock and cart operations
                 cart_items = CartItem.objects.filter(cart__user=request.user)
                 for cart_item in cart_items:
                     product = cart_item.product
                     if product.quantity < cart_item.quantity:
+                        #print(f"Insufficient stock for product {product.title}")
                         return JsonResponse({'status': f"Insufficient stock for product {product.title}."}, status=400)
                     product.quantity -= cart_item.quantity
                     product.popularity += cart_item.quantity
                     product.save()
+                    #print(f"Updated product stock and popularity: {product.title}")
 
                     OrderItem.objects.update_or_create(
                         order=order,
                         product=product,
                         defaults={'quantity': cart_item.quantity, 'total_price': cart_item.total_price}
                     )
+                    #print(f"Updated or created order item for product: {product.title}")
 
                 cart_items.delete()
                 return JsonResponse({'status': 'Order placed successfully', 'order_number': order.order_number})
 
         except json.JSONDecodeError:
+            #print("Invalid JSON data")
             return JsonResponse({'status': 'Invalid JSON data'}, status=400)
         except Exception as e:
+            #print(f"An error occurred: {str(e)}")
             return JsonResponse({'status': f"An error occurred: {str(e)}"}, status=500)
     else:
+        #print("Invalid request method")
         return JsonResponse({'status': 'Invalid request method'}, status=405)
+
 
 def order_failed(request):
     return render(request, 'user/order_failed.html')

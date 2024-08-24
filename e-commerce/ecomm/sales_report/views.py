@@ -340,10 +340,11 @@ def download_sales_report_excel(request):
 def generate_invoice(request, order_number):
     order = Order.objects.get(order_number=order_number)
     
-    # Prepare the context for the template
+   
     context = {
         'order': order,
         'user': order.user,
+        'coupon': order.coupon,
     }
     
     # Render the HTML template with the context
