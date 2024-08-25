@@ -16,6 +16,7 @@ from .forms import CouponForm, ProductVariantForm
 from wallet.models import Referral, WalletTransaction
 from django.db.models import Count, Q
 from django.views.decorators.csrf import csrf_exempt
+from django.db.models import F, ExpressionWrapper, DecimalField, Count
 
 
 def shop(request):
@@ -34,19 +35,20 @@ def shop(request):
 
     # Apply search filter
     if search_query:
-        product_list = product_list.filter(Q(title__icontains=search_query) |
-                                           Q(description__icontains=search_query) |
-                                           Q(brand__brand_name__icontains=search_query)|
-                                           Q(category__category_name__icontains=search_query)|
-                                           Q(subcategory__subcategory_name__icontains=search_query) |
-                                           Q(colors__color_name__icontains=search_query) |
-                                           Q(sizes__size_name__icontains=search_query)
-                                        ).distinct()
+        product_list = product_list.filter(
+            Q(title__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(brand__brand_name__icontains=search_query) |
+            Q(category__category_name__icontains=search_query) |
+            Q(subcategory__subcategory_name__icontains=search_query) |
+            Q(colors__color_name__icontains=search_query) |
+            Q(sizes__size_name__icontains=search_query)
+        ).distinct()
 
-    # Apply category and subcategory filter together
+    # Apply category and subcategory filter
     if category_names:
         product_list = product_list.filter(category__category_name__in=category_names).distinct()
-
+    
     if subcategory_names:
         product_list = product_list.filter(subcategory__subcategory_name__in=subcategory_names).distinct()
 
@@ -65,22 +67,29 @@ def shop(request):
     # Apply price range filter
     try:
         if min_price:
-            product_list = product_list.filter(original_price__gte=float(min_price))
+            product_list = product_list.filter(offer_price__gte=min_price)
         if max_price:
-            product_list = product_list.filter(original_price__lte=float(max_price))
+            product_list = product_list.filter(offer_price__lte=max_price)
     except ValueError:
         pass
 
     # Annotate products with purchase counts
-    product_list = product_list.annotate(cart_count=Count('cartitem'))
+    product_list = product_list.annotate(
+        offer_price_field=ExpressionWrapper(
+            F('original_price') * (1 - F('product_offer') / 100),
+            output_field=DecimalField()
+        ),
+        cart_count=Count('cartitem')
+    )
+
 
     # Apply sorting
     if sort == 'popularity':
         product_list = product_list.order_by('-cart_count')
     elif sort == 'price_low_high':
-        product_list = product_list.order_by('original_price')
+        product_list = product_list.order_by('offer_price_field')
     elif sort == 'price_high_low':
-        product_list = product_list.order_by('-original_price')
+        product_list = product_list.order_by('-offer_price_field')
     elif sort == 'average_ratings':
         product_list = product_list.order_by('-rating')
     elif sort == 'featured':

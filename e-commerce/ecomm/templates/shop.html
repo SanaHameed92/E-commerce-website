@@ -38,13 +38,13 @@
                             <div class="btn-group">
                                 <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" id="dropdownMenuReference" data-toggle="dropdown">Reference</button>
                                 <div class="dropdown-menu" aria-labelledby="dropdownMenuReference">
-                                  <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=popularity">Popularity</a>
-                                  <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=a_z">Name, A to Z</a>
-                                  <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=z_a">Name, Z to A</a>
-                                  <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=average_ratings">Average Ratings</a>
+                                  <a class="dropdown-item" href="?sort=popularity{% if selected_category %}&category={{ selected_category|join:"&category=" }}{% endif %}{% if selected_subcategory %}&subcategory={{ selected_subcategory|join:"&subcategory=" }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}">Popularity</a>
+                                  <a class="dropdown-item" href="?sort=a_z{% if selected_category %}&category={{ selected_category|join:"&category=" }}{% endif %}{% if selected_subcategory %}&subcategory={{ selected_subcategory|join:"&subcategory=" }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}">Name, A to Z</a>
+                                  <a class="dropdown-item" href="?sort=z_a{% if selected_category %}&category={{ selected_category|join:"&category=" }}{% endif %}{% if selected_subcategory %}&subcategory={{ selected_subcategory|join:"&subcategory=" }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}">Name, Z to A</a>
+                                  <a class="dropdown-item" href="?sort=average_ratings{% if selected_category %}&category={{ selected_category|join:"&category=" }}{% endif %}{% if selected_subcategory %}&subcategory={{ selected_subcategory|join:"&subcategory=" }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}">Average Ratings</a>
                                   <div class="dropdown-divider"></div>
-                                  <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=price_low_high">Price, low to high</a>
-                                  <a class="dropdown-item" href="{% url 'product_page:shop' %}?sort=price_high_low">Price, high to low</a>
+                                  <a class="dropdown-item" href="?sort=price_low_high{% if selected_category %}&category={{ selected_category|join:"&category=" }}{% endif %}{% if selected_subcategory %}&subcategory={{ selected_subcategory|join:"&subcategory=" }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}">Price, low to high</a>
+                                  <a class="dropdown-item" href="?sort=price_high_low{% if selected_category %}&category={{ selected_category|join:"&category=" }}{% endif %}{% if selected_subcategory %}&subcategory={{ selected_subcategory|join:"&subcategory=" }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}">Price, high to low</a>
                                 </div>
                             </div>
                         </div>
