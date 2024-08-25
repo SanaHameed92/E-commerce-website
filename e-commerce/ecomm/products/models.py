@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
-from User.models import Address
+from User.models import Address, OrderAddress
 
 
 class Category(models.Model):
@@ -190,8 +190,8 @@ class Order(models.Model):
     )
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    address = models.ForeignKey(Address, on_delete=models.CASCADE)
-    payment_method = models.CharField(max_length=50)
+    address = models.ForeignKey(OrderAddress, on_delete=models.CASCADE, related_name='orders')
+    payment_method = models.CharField(max_length=50,null=False,default=False)
     order_notes = models.TextField(blank=True, null=True)
     total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     shipping_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
