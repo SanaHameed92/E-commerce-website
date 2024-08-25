@@ -160,7 +160,7 @@ def order_detail(request, order_number):
         'order_items': order_items,
         'can_continue_payment': can_continue_payment,
         'cancellation_request': cancellation_request,
-        'discount_amount': order.discount_amount,
+       
     }
     return render(request, 'user/order_detail.html', context)
 

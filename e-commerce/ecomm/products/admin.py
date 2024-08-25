@@ -2,7 +2,7 @@ from datetime import timezone
 from django.contrib import admin
 
 # Register your models here.
-from .models import Coupon, Product, Category, Brand, Size, Color, ProductImage,Order,OrderItem,ProductVariant
+from .models import Coupon, Product, Category, Brand, Size, Color, ProductImage,Order,OrderItem,ProductVariant,OrderAddress
 
 
 
@@ -12,6 +12,7 @@ admin.site.register(ProductVariant)
 admin.site.register(ProductImage)
 admin.site.register(Order)
 admin.site.register(OrderItem)
+admin.site.register(OrderAddress)
 
 
 @admin.register(Product)

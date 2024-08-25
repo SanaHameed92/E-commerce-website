@@ -10,7 +10,7 @@ from django.shortcuts import render,redirect
 from django.urls import reverse
 from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
-from User.models import Address
+from User.models import Address, OrderAddress
 from django.db.models import Count
 from .forms import CouponForm, ProductVariantForm
 from wallet.models import Referral, WalletTransaction
@@ -353,6 +353,18 @@ def checkout(request):
         except Address.DoesNotExist:
             messages.error(request, "Selected address does not exist.")
             return redirect('product_page:checkout')
+        
+        order_address = OrderAddress.objects.create(
+            first_name=selected_address.first_name,
+            last_name=selected_address.last_name,
+            phone_number=selected_address.phone_number,
+            street_address=selected_address.street_address,
+            city=selected_address.city,
+            state=selected_address.state,
+            country=selected_address.country,
+            postal_code=selected_address.postal_code,
+            email=selected_address.email
+        )
 
         formatted_address = (f"{selected_address.first_name} {selected_address.last_name}, "
                               f"{selected_address.street_address}, {selected_address.city}, "
@@ -450,41 +462,38 @@ def place_order(request):
         payment_id = request.POST.get('payment_id')
         coupon_code = request.session.get('applied_coupon_code', None)
 
-        # Debugging #prints
-        #print(f"Cart Items Data: {cart_items_data}")
-        #print(f"Total: {total}, Shipping Fee: {shipping_fee}, Grand Total: {grand_total}")
-        #print(f"Selected Address ID: {address_id}")
-        #print(f"Payment Method: {payment_method}")
-        #print(f"Payment ID: {payment_id}")
-        #print(f"Coupon Code from Session: {coupon_code}")
-
         if not cart_items_data or not address_id:
             return JsonResponse({'status': "Incomplete order details"}, status=400)
 
         try:
-            selected_address = Address.objects.get(id=address_id)
-            #print(f"Selected Address: {selected_address}")
+            # Retrieve the address from the database
+            selected_address_instance = Address.objects.get(id=address_id)
 
+            # Create the OrderAddress instance
+            order_address = OrderAddress.objects.create(
+                first_name=selected_address_instance.first_name,
+                last_name=selected_address_instance.last_name,
+                phone_number=selected_address_instance.phone_number,
+                street_address=selected_address_instance.street_address,
+                city=selected_address_instance.city,
+                state=selected_address_instance.state,
+                country=selected_address_instance.country,
+                postal_code=selected_address_instance.postal_code,
+                email=selected_address_instance.email
+            )
+
+            # Retrieve coupon if available
             coupon = None
-
             if coupon_code:
                 try:
                     coupon = Coupon.objects.get(code=coupon_code)
-                    #print(f"Found Coupon: {coupon}")
                 except Coupon.DoesNotExist:
                     coupon = None
-                    #print(f"Coupon not found for code: {coupon_code}")
-
-            #print(f"Coupon being applied: {coupon}")
-
-            for item_data in cart_items_data:
-                if item_data['quantity'] <= 0:
-                    return JsonResponse({'status': f"Invalid quantity for product {item_data['title']}."}, status=400)
 
             # Create the order
             order = Order.objects.create(
                 user=request.user,
-                address=selected_address,
+                address=order_address,
                 payment_method=payment_method,
                 total_amount=total,
                 shipping_fee=shipping_fee,
@@ -495,12 +504,10 @@ def place_order(request):
                 payment_status='Pending',
                 coupon=coupon if coupon else None
             )
-            #print(f"Order created: {order}")
 
+            # Process cart items
             for item_data in cart_items_data:
                 product = Product.objects.get(title=item_data['title'])
-                #print(f"Processing product: {product.title}, Quantity: {item_data['quantity']}")
-
                 if product.quantity < item_data['quantity']:
                     return JsonResponse({'status': f"Insufficient stock for product {product.title}."}, status=400)
 
@@ -515,17 +522,13 @@ def place_order(request):
                 product.quantity -= item_data['quantity']
                 product.popularity += item_data['quantity']
                 product.save()
-                #print(f"Updated product stock and popularity: {product.title}")
 
             # Clear the cart
             CartItem.objects.filter(cart__user=request.user).delete()
-            #print(f"Cart cleared for user: {request.user}")
 
             # Handle wallet payment
             if payment_method == 'Wallet':
                 user = request.user
-                #print(f"User wallet balance before payment: {user.wallet}")
-
                 if user.wallet < grand_total:
                     return JsonResponse({'status': "Insufficient wallet balance."}, status=400)
 
@@ -546,18 +549,13 @@ def place_order(request):
                 order.payment_status = 'Completed'
                 order.save()
 
-                #print(f"Wallet payment processed. Order updated: {order}")
-
             return redirect('product_page:order_success', order_number=order.order_number)
 
         except Address.DoesNotExist:
-            #print(f"Address with ID {address_id} does not exist.")
             return JsonResponse({'status': "Selected address does not exist."}, status=400)
         except Product.DoesNotExist:
-            #print(f"Product does not exist.")
             return JsonResponse({'status': "Product does not exist."}, status=400)
         except Exception as e:
-            #print(f"An error occurred while placing the order: {e}")
             return JsonResponse({'status': f"An error occurred while placing the order: {e}"}, status=500)
         
 

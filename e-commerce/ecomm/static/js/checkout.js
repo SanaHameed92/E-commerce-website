@@ -45,15 +45,11 @@ $(document).ready(function () {
                             headers: {
                                 'X-CSRFToken': token
                             },
-                            data: JSON.stringify({
-                                "payment_id": responseb.razorpay_payment_id,
-                                "order_id": response.order_id
-                            }),
-                            contentType: "application/json", // Ensure content type is set correctly
+                            data: JSON.stringify(data),
+                            contentType: "application/json",
                             success: function (responsec) {
-                                console.log("Confirm order response:", responsec); 
                                 if (responsec.status === 'Order placed successfully') {
-                                    swal("Congratulations!", "Your order has been placed successfully.", "success").then((value) => {
+                                    swal("Congratulations!", "Your order has been placed successfully.", "success").then(() => {
                                         window.location.href = '/products/order-success/' + responsec.order_number;
                                     });
                                 } else {
