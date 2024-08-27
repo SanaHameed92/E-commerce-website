@@ -282,6 +282,34 @@
 .show {
     display: block;
 }
+.coupon-info {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #e9ecef;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    color: #495057;
+    font-size: 1rem;
+}
+
+.coupon-info h4 {
+    margin-top: 0;
+    color: #007bff;
+    font-size: 1.1rem;
+}
+
+.coupon-info p {
+    margin: 5px 0;
+}
+.continue-payment-label {
+    display: block; /* Ensure the span is on its own line */
+    margin-top: 15px; /* Space above the text */
+    margin-bottom: 20px; /* Space below the text */
+    font-size: 25px; /* Adjust font size as needed */
+    font-weight: bold; /* Make the text bold */
+    color: #333; /* Dark color for the text */
+    text-align: center; /* Center the text */
+}
 
 
 
@@ -300,7 +328,9 @@
                         <a href="{% url 'generate_invoice' order_number=order.order_number %}" class="invoice-button">Download Invoice</a>
                     </div>
                 {% elif order.payment_status == 'Pending'%}
-                <a href="#" id="continue-payment-btn" class="continue-button">Continue Payment</a>
+                <span class="continue-payment-label">Continue Payment with</span>
+                <a href="#" id="continue-payment-btn" class="continue-button">Razorpay</a>
+                <a href="#" id="wallet-payment-btn" class="wallet-button">Wallet</a>
                 <div class="payment-status-container">
                     <span class="payment-status">{{ order.payment_status }}</span>
                 </div>
@@ -308,7 +338,9 @@
             {% elif order.payment_method == 'RazorPay' %}
                 {% if order.status == 'Pending' %}
                     <!-- Payment is pending for RazorPay orders with pending status -->
-                    <a href="#" id="continue-payment-btn" class="continue-button">Continue Payment</a>
+                    <span class="continue-payment-label">Continue Payment with</span>
+                    <a href="#" id="continue-payment-btn" class="continue-button">Razorpay</a>
+                    <a href="#" id="wallet-payment-btn" class="wallet-button">Wallet</a>
                     <div class="payment-status-container">
                         <span class="payment-status">{{ order.payment_status }}</span>
                     </div>
@@ -334,6 +366,18 @@
                     <button type="submit" class="btn btn-success">Submit Return Request</button>
                 </form>
             {% endif %}
+            <!-- Display coupon applied information -->
+            {% if order.coupon %}
+            <div class="coupon-info">
+                <h4>Applied Coupon:</h4>
+                <p>Coupon Code: {{ order.coupon.code }}</p>
+                <p>Discount: {{ order.coupon.discount|floatformat:2 }}%</p>
+                <p>Amount Saved: Rs{{ amount_saved|floatformat:2 }}</p>
+            </div>
+            {% endif %}
+
+            
+            
 
             
         </div>
@@ -347,7 +391,7 @@
             Status: {{ order.status }}
         </p>
         
-        <p>Total: ${{ order.grand_total|floatformat:2 }}</p>
+        <p>Total: Rs{{ order.grand_total|floatformat:2 }}</p>
         <p>Payment Method: {{ order.payment_method }}</p>
         <p>Payment Status: {{ order.payment_status }}</p> 
 
@@ -378,7 +422,7 @@
                         <a href="{% url 'product_page:shop-single' item.product.id %}">{{ item.product.title }}</a>
                     </td>
                     <td>{{ item.quantity }}</td>
-                    <td class="item-price">${{ item.total_price|floatformat:2 }}</td>
+                    <td class="item-price">Rs{{ item.total_price|floatformat:2 }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -440,34 +484,38 @@
         var returnRequestButton = document.getElementById('request-return-btn');
         var returnRequestForm = document.getElementById('return-request-form');
 
-        // Razorpay payment script
         if (continuePaymentButton) {
             continuePaymentButton.addEventListener('click', function(e) {
                 e.preventDefault();
-
-                var options = {
-                    "key": "rzp_test_Yl6grfBbwpSDvh", 
-                    "amount": {{ order.grand_total|floatformat:2 }} * 100, // Amount in paise
-                    "currency": "INR",
-                    "name": "Your Company Name",
-                    "description": "Order Payment",
-                    "order_id": "{{ order.razorpay_order_id }}", // Razorpay Order ID
-                    "handler": function (response) {
-                        // Handle payment success
-                        window.location.href = "{% url 'product_page:order_success' order_number=order.order_number %}?payment_id=" + response.razorpay_payment_id;
-                    },
-                    "prefill": {
-                        "name": "{{ order.address.first_name }} {{ order.address.last_name }}",
-                        "email": "{{ user.email }}",
-                        "contact": "{{ order.address.phone_number }}"
-                    },
-                    "theme": {
-                        "color": "#3399cc"
-                    }
-                };
-
-                var rzp = new Razorpay(options);
-                rzp.open();
+    
+                // Display confirmation dialog
+                var userConfirmed = confirm("Are you sure you want to proceed with Razorpay payment?");
+    
+                if (userConfirmed) {
+                    var options = {
+                        "key": "rzp_test_Yl6grfBbwpSDvh", 
+                        "amount": {{ order.grand_total|floatformat:2 }} * 100, // Amount in paise
+                        "currency": "INR",
+                        "name": "Your Company Name",
+                        "description": "Order Payment",
+                        "order_id": "{{ order.razorpay_order_id }}", // Razorpay Order ID
+                        "handler": function (response) {
+                            // Handle payment success
+                            window.location.href = "{% url 'product_page:order_success_after_failure' order_number=order.order_number %}?payment_id=" + response.razorpay_payment_id;
+                        },
+                        "prefill": {
+                            "name": "{{ order.address.first_name }} {{ order.address.last_name }}",
+                            "email": "{{ user.email }}",
+                            "contact": "{{ order.address.phone_number }}"
+                        },
+                        "theme": {
+                            "color": "#3399cc"
+                        }
+                    };
+    
+                    var rzp = new Razorpay(options);
+                    rzp.open();
+                }
             });
         }
 
@@ -502,6 +550,41 @@
             });
         }
     });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var walletPaymentButton = document.getElementById('wallet-payment-btn');
+    
+        if (walletPaymentButton) {
+            walletPaymentButton.addEventListener('click', function(e) {
+                e.preventDefault();
+    
+                // Display the confirmation dialog
+                var userConfirmed = confirm("Are you proceeding to pay with wallet?");
+                
+                if (userConfirmed) {
+                    // Send AJAX request to wallet_payment view
+                    fetch('{% url "wallet_payment" order_number=order.order_number %}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            window.location.href = "{% url 'product_page:order_success_after_failure' order_number=order.order_number %}";
+                        } else {
+                            alert(data.message);
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+                }
+            });
+        }
+    });
+    
+    
 </script>
 
 

@@ -1,8 +1,19 @@
 {% extends "admin_base.html" %}
 
 {% block content %}
+
+<div class="container">
 <h2 class='text-center'>Return Requests</h2>
 
+<form method="get" class="mb-4">
+    <div class="input-group">
+        <input type="text" name="search" value="{{ search_query }}" class="form-control" placeholder="Search by name or code">
+        <div class="input-group-append">
+            <button class="btn btn-secondary" type="submit">Search</button>
+        </div>
+    </div>
+</form>
+<!-- Return Requests Table -->
 <table class="table">
     <thead>
         <tr>
@@ -28,4 +39,32 @@
         {% endfor %}
     </tbody>
 </table>
+
+<!-- Pagination Controls -->
+<div class="pagination">
+    <!-- Previous Page Link -->
+    {% if return_requests.has_previous %}
+        <a class="page-item" href="?page={{ return_requests.previous_page_number }}&search={{ search_query }}">Previous</a>
+    {% else %}
+        <span class="page-item disabled">Previous</span>
+    {% endif %}
+
+    <!-- Page Number Links -->
+    {% for page_num in return_requests.paginator.page_range %}
+        {% if page_num == return_requests.number %}
+            <span class="page-item active">{{ page_num }}</span>
+        {% else %}
+            <a class="page-item" href="?page={{ page_num }}&search={{ search_query }}">{{ page_num }}</a>
+        {% endif %}
+    {% endfor %}
+
+    <!-- Next Page Link -->
+    {% if return_requests.has_next %}
+        <a class="page-item" href="?page={{ return_requests.next_page_number }}&search={{ search_query }}">Next</a>
+    {% else %}
+        <span class="page-item disabled">Next</span>
+    {% endif %}
+</div>
+</div>
+
 {% endblock %}

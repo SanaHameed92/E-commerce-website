@@ -11,6 +11,7 @@ urlpatterns = [
     path('order/<str:order_number>/request-cancel/', views.request_cancel_order, name='request_cancel_order'),
     path('admin/review-cancellation-requests/', views.review_cancellation_requests, name='review_cancellation_requests'),
     path('admin/process-cancellation-request/<int:request_id>/<str:action>/', views.process_cancellation_request, name='process_cancellation_request'),
+    path('order/<str:order_number>/wallet_payment/', views.wallet_payment, name='wallet_payment'),
 
 
 ]

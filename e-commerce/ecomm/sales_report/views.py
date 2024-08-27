@@ -12,38 +12,55 @@ from reportlab.lib.styles import getSampleStyleSheet
 from django.utils.timezone import make_naive
 from django.template.loader import render_to_string
 from xhtml2pdf import pisa
+from django.core.paginator import Paginator
+from django.db.models import Q
 
 def sale_report_view(request):
     filter_option = request.GET.get('filter', 'all')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
+    search_query = request.GET.get('search', '')
+
+    # Base query for orders
+    orders_query = Order.objects.all()
 
     # Date filters
-    if filter_option == 'all':
-        orders = Order.objects.all()
-    elif filter_option == 'today':
+    if filter_option == 'today':
         today = timezone.now().date()
-        orders = Order.objects.filter(created_at__date=today)
+        orders_query = orders_query.filter(created_at__date=today)
     elif filter_option == 'weekly':
         start_of_week = timezone.now().date() - timedelta(days=timezone.now().weekday())
-        orders = Order.objects.filter(created_at__date__gte=start_of_week)
+        orders_query = orders_query.filter(created_at__date__gte=start_of_week)
     elif filter_option == 'monthly':
         start_of_month = timezone.now().date().replace(day=1)
-        orders = Order.objects.filter(created_at__date__gte=start_of_month)
+        orders_query = orders_query.filter(created_at__date__gte=start_of_month)
     elif filter_option == 'yearly':
         start_of_year = timezone.now().date().replace(month=1, day=1)
-        orders = Order.objects.filter(created_at__date__gte=start_of_year)
+        orders_query = orders_query.filter(created_at__date__gte=start_of_year)
     elif filter_option == 'custom' and start_date and end_date:
-        orders = Order.objects.filter(created_at__date__range=[start_date, end_date])
-    else:
-        orders = Order.objects.all()  # Fallback to all time if invalid filter
+        orders_query = orders_query.filter(created_at__date__range=[start_date, end_date])
 
-    overall_sales_count = orders.count()
-    overall_success_amount = orders.filter(status='Delivered').aggregate(Sum('grand_total'))['grand_total__sum'] or 0
+    # Search functionality
+    if search_query:
+        orders_query = orders_query.filter(
+            Q(user__username__icontains=search_query) |
+            Q(id__icontains=search_query) |
+            Q(items__product__title__icontains=search_query) |
+            Q(items__product__description__icontains=search_query) |
+            Q(items__product__original_price__icontains=search_query) |
+            Q(items__total_price__icontains=search_query) |
+            Q(items__quantity__icontains=search_query) |
+            Q(grand_total__icontains=search_query) |
+            Q(status__icontains=search_query) |
+            Q(payment_method__icontains=search_query)
+        ).distinct()
+    # Calculate overall statistics before pagination
+    overall_sales_count = orders_query.count()
+    overall_success_amount = orders_query.filter(status='Delivered').aggregate(Sum('grand_total'))['grand_total__sum'] or 0
 
     # Calculate overall discount based on offer_price
     discount_amount = 0
-    for order in orders:
+    for order in orders_query:
         for item in order.items.all():
             original_price = item.product.original_price
             offer_price = item.product.offer_price
@@ -52,11 +69,16 @@ def sale_report_view(request):
     overall_discount = discount_amount
 
     # Additional statistics
-    success_order_count = orders.filter(status='Delivered').count()
-    cancelled_order_count = orders.filter(status='Cancelled').count()
-    returned_order_count = orders.filter(return_request__isnull=False).count()
-    return_request_count = orders.filter(return_request__status='Requested').count()
-    in_progress_count = orders.filter(status='Ordered').count()
+    success_order_count = orders_query.filter(status='Delivered').count()
+    cancelled_order_count = orders_query.filter(status='Cancelled').count()
+    returned_order_count = orders_query.filter(return_request__isnull=False).count()
+    return_request_count = orders_query.filter(return_request__status='Requested').count()
+    in_progress_count = orders_query.filter(status='Ordered').count()
+
+    # Pagination
+    paginator = Paginator(orders_query, 3)  # Show 10 orders per page
+    page_number = request.GET.get('page')
+    orders = paginator.get_page(page_number)
 
     context = {
         'orders': orders,
@@ -68,8 +90,9 @@ def sale_report_view(request):
         'returned_order_count': returned_order_count,
         'return_request_count': return_request_count,
         'in_progress_count': in_progress_count,
+        'search_query': search_query,
     }
-    
+
     return render(request, 'admin_side/sales_report.html', context)
 
 

@@ -1,3 +1,4 @@
+from django.http import JsonResponse
 from django.shortcuts import render
 from . models import CancellationRequest, Referral, WalletTransaction
 from django.shortcuts import get_object_or_404, redirect
@@ -7,6 +8,9 @@ from django.db.models import F
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import user_passes_test
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.views.decorators.http import require_POST
 
 # Create your views here.
 def my_wallet(request):
@@ -38,6 +42,7 @@ def request_return(request, order_number):
 def admin_confirm_return(request, return_request_id):
     return_request = get_object_or_404(ReturnRequest, id=return_request_id)
     order = return_request.order
+    
 
     if return_request.status == 'Requested':
         # Start a transaction to ensure atomic operations
@@ -53,10 +58,12 @@ def admin_confirm_return(request, return_request_id):
 
             # Get the user associated with the order
             user = order.user
-
             if user:
+                # Calculate the refund amount after deducting the shipping charge
+                refund_amount = order.grand_total - order.shipping_fee
+
                 # Credit the wallet
-                user.wallet += order.grand_total
+                user.wallet += refund_amount
                 user.save()
 
                 # Record the wallet transaction
@@ -98,8 +105,26 @@ def admin_reject_return(request, return_request_id):
     return redirect('admin_return_requests')
 
 def admin_return_requests(request):
+    search_query = request.GET.get('search', '')
+
+    # Filter return requests based on search query
     return_requests = ReturnRequest.objects.all()
-    return render(request, 'admin_side/admin_return_requests.html', {'return_requests': return_requests})
+    if search_query:
+        return_requests = return_requests.filter(
+            Q(order__order_number__icontains=search_query) |
+            Q(reason__icontains=search_query) |
+            Q(status__icontains=search_query)
+        )
+
+    # Paginate the return requests
+    paginator = Paginator(return_requests, 3)  # Show 10 return requests per page
+    page_number = request.GET.get('page')
+    return_requests_page = paginator.get_page(page_number)
+
+    return render(request, 'admin_side/admin_return_requests.html', {
+        'return_requests': return_requests_page,
+        'search_query': search_query
+    })
 
 
 @login_required
@@ -191,3 +216,32 @@ def process_cancellation_request(request, request_id, action):
     }
 
     return redirect('review_cancellation_requests')
+
+
+@require_POST
+def wallet_payment(request, order_number):
+    order = get_object_or_404(Order, order_number=order_number)
+    user = request.user
+
+    if order.grand_total > user.wallet:
+        return JsonResponse({'status': 'error', 'message': 'Insufficient wallet balance.'})
+
+    # Deduct from wallet
+    user.wallet -= order.grand_total
+    user.save()
+
+    # Update order status
+    order.payment_status = 'Completed'
+    order.status = 'Ordered'
+    order.save()
+
+    # Log wallet transaction
+    WalletTransaction.objects.create(
+        user=user,
+        transaction_type='Debit',
+        amount=order.grand_total,
+        description=f'Payment for Order {order_number}'
+    )
+
+    messages.success(request, 'Payment completed successfully with wallet.')
+    return JsonResponse({'status': 'success', 'message': 'Payment successful.'})

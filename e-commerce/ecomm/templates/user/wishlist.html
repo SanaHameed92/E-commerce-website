@@ -130,4 +130,50 @@
     <p>Your wishlist is empty.</p>
     {% endif %}
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const forms = document.querySelectorAll('.remove-wishlist-form');
+        
+        forms.forEach(form => {
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+                const formAction = form.getAttribute('action');
+                const wishlistItem = form.closest('.wishlist-item');
+                const productId = wishlistItem.getAttribute('data-product-id');
+
+                fetch(formAction, { method: 'POST', body: new FormData(form) })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update localStorage to reflect the item has been removed
+                            localStorage.setItem(`wishlist_${productId}`, 'false');
+
+                            // Remove the item from the wishlist display
+                            wishlistItem.remove();
+
+                            // Optionally, display a success message
+                            let messageElement = document.createElement('div');
+                            messageElement.className = 'alert alert-success';
+                            messageElement.textContent = data.message;
+                            document.querySelector('.wishlist-container').insertAdjacentElement('beforebegin', messageElement);
+                            setTimeout(() => messageElement.remove(), 2000);
+
+                            // Update the wishlist icon on other pages
+                            const wishlistIcon = document.querySelector(`.wishlist-icon[data-product-id="${productId}"]`);
+                            if (wishlistIcon) {
+                                wishlistIcon.classList.remove('active');
+                                localStorage.setItem(`wishlist_${productId}`, 'false');
+                            }
+                        } else {
+                            alert('Error removing item from wishlist');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            });
+        });
+    });
+</script>
+
 {% endblock %}
