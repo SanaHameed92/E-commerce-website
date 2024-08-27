@@ -31,7 +31,7 @@ urlpatterns = [
     path('variants/delete/<int:pk>/', views.delete_product_variant, name='delete_product_variant'),
     path('confirm-order-razorpay/', views.confirm_order_razorpay, name='confirm_order_razorpay'),
     path('order-failed/', views.order_failed, name='order_failed'),
-    
+    path('order-success-after-failure/<str:order_number>/', views.order_success_after_failure, name='order_success_after_failure'),
     
     
     

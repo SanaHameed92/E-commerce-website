@@ -17,6 +17,7 @@ from wallet.models import Referral, WalletTransaction
 from django.db.models import Count, Q
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import F, ExpressionWrapper, DecimalField, Count
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 
 
 def shop(request):
@@ -398,6 +399,7 @@ def checkout(request):
             'payment_method': payment_method,
         }
         request.session['estimated_delivery_date'] = formatted_delivery_date
+        request.session['order_address_id'] = order_address.id
 
         # Redirect based on payment method
         if payment_method == 'RazorPay':
@@ -479,17 +481,25 @@ def place_order(request):
             selected_address_instance = Address.objects.get(id=address_id)
 
             # Create the OrderAddress instance
-            order_address = OrderAddress.objects.create(
-                first_name=selected_address_instance.first_name,
-                last_name=selected_address_instance.last_name,
-                phone_number=selected_address_instance.phone_number,
-                street_address=selected_address_instance.street_address,
-                city=selected_address_instance.city,
-                state=selected_address_instance.state,
-                country=selected_address_instance.country,
-                postal_code=selected_address_instance.postal_code,
-                email=selected_address_instance.email
-            )
+            # order_address = OrderAddress.objects.create(
+            #     first_name=selected_address_instance.first_name,
+            #     last_name=selected_address_instance.last_name,
+            #     phone_number=selected_address_instance.phone_number,
+            #     street_address=selected_address_instance.street_address,
+            #     city=selected_address_instance.city,
+            #     state=selected_address_instance.state,
+            #     country=selected_address_instance.country,
+            #     postal_code=selected_address_instance.postal_code,
+            #     email=selected_address_instance.email
+            # )
+            order_address_id = request.session.get('order_address_id')
+            if not order_address_id:
+                return JsonResponse({'status': "Order address not found in session."}, status=400)
+
+            try:
+                order_address = OrderAddress.objects.get(id=order_address_id)
+            except OrderAddress.DoesNotExist:
+                return JsonResponse({'status': "Order address does not exist."}, status=400)
 
             # Retrieve coupon if available
             coupon = None
@@ -630,13 +640,57 @@ def order_success(request, order_number):
 
     return render(request, 'user/order_success.html', context)
 
+def order_success_after_failure(request, order_number):
+    # Fetch the order using the order_number
+    order = get_object_or_404(Order, order_number=order_number)
+    
+    # Ensure the order was pending and now update to completed
+    if order.payment_method == 'COD' and order.payment_status == 'Pending':
+        order.payment_status = 'Completed'
+        order.status = 'Ordered'
+        order.save()
+        
+
+    # Clear the cart for the user
+    cart_items = CartItem.objects.filter(cart__user=request.user)
+    cart_items.delete()
+
+    context = {
+        'order': order,
+        'order_number': order_number,
+    }
+
+    return render(request, 'user/order_success_after_failure.html', context)
 
 
 
 
 def coupon_list(request):
-    coupons = Coupon.objects.all()
-    return render(request, 'admin_side/coupon_list.html', {'coupons': coupons})
+    search_query = request.GET.get('search', '')
+
+    if search_query:
+        coupon_list = Coupon.objects.filter(
+            Q(name__icontains=search_query) |
+            Q(code__icontains=search_query)
+        )
+    else:
+        coupon_list = Coupon.objects.all()
+
+    paginator = Paginator(coupon_list, 3)  # Show 3 coupons per page
+
+    page = request.GET.get('page')
+    try:
+        coupons = paginator.page(page)
+    except PageNotAnInteger:
+        coupons = paginator.page(1)
+    except EmptyPage:
+        coupons = paginator.page(paginator.num_pages)
+
+    context = {
+        'coupons': coupons,
+        'search_query': search_query,
+    }
+    return render(request, 'admin_side/coupon_list.html', context)
 
 def coupon_add(request):
     if request.method == 'POST':
@@ -754,10 +808,19 @@ def razorpaycheck(request):
             if not address:
                 #print("No address found for the user")
                 return JsonResponse({'error': 'No address found for the user'}, status=400)
+            
+            order_address_id = request.session.get('order_address_id')
+            if not order_address_id:
+                return JsonResponse({'status': "Order address not found in session."}, status=400)
+
+            try:
+                order_address = OrderAddress.objects.get(id=order_address_id)
+            except OrderAddress.DoesNotExist:
+                return JsonResponse({'status': "Order address does not exist."}, status=400)
 
             order = Order.objects.create(
                 user=request.user,
-                address=address,
+                address=order_address,
                 payment_method='RazorPay',
                 total_amount=total_price,
                 shipping_fee=shipping_fee,
@@ -776,10 +839,10 @@ def razorpaycheck(request):
                     quantity=cart_item.quantity,
                     total_price=cart_item.total_price,
                 )
-                #print(f"Added item to order: Product {cart_item.product.title}, Quantity: {cart_item.quantity}")
+            
 
             request.session.pop('applied_coupon_code', None)
-            #print("Cleared coupon code from session after order placement")
+           
 
             return JsonResponse({
                 'total_price': grand_total,

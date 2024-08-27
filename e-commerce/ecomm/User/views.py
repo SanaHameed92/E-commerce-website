@@ -15,6 +15,9 @@ from django.views.decorators.http import require_POST
 from django.db.models import Count
 from django.core.exceptions import MultipleObjectsReturned
 from wallet.models import CancellationRequest, WalletTransaction
+from django.db.models import Q  
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from decimal import Decimal, InvalidOperation
 
 User = get_user_model()
 
@@ -127,8 +130,17 @@ def reset_password(request):
     return render(request, 'user/profile.html', {'form': form})
 
 def my_orders(request):
+    query = request.GET.get('search', '')
     orders = Order.objects.filter(user=request.user).order_by('-created_at')
-    return render(request, 'user/my_orders.html', {'orders': orders})
+
+    if query:
+        orders = orders.filter(
+            Q(order_number__icontains=query) |
+            Q(status__icontains=query) |
+            Q(payment_status__icontains=query) |
+            Q(payment_method__icontains=query)
+        )
+    return render(request, 'user/my_orders.html', {'orders': orders,'search_query': query})
 
 def delete_order(request, order_number):
     order = get_object_or_404(Order, order_number=order_number, user=request.user)
@@ -143,6 +155,11 @@ def order_detail(request, order_number):
     try:
         order = Order.objects.get(order_number=order_number)
         print(f"Order found: {order}") 
+
+        amount_saved = 0
+        if order.coupon:
+            discount = order.coupon.discount
+            amount_saved = (order.total_amount * discount / 100)
       
         cancellation_request = CancellationRequest.objects.filter(order=order).first()
         order_items = OrderItem.objects.filter(order=order)
@@ -160,6 +177,7 @@ def order_detail(request, order_number):
         'order_items': order_items,
         'can_continue_payment': can_continue_payment,
         'cancellation_request': cancellation_request,
+        'amount_saved': amount_saved,
        
     }
     return render(request, 'user/order_detail.html', context)
@@ -231,10 +249,55 @@ def cancel_order(request, order_number):
     # Redirect to the order detail or any other page you prefer
     return redirect('order_detail', order_number=order_number)
 
-
 def order_list(request):
-    orders = Order.objects.all().order_by('-created_at')  # Adjust according to your model and filtering needs
-    return render(request, 'admin_side/order_list.html', {'orders': orders})
+    search_query = request.GET.get('search', '')
+
+    if search_query:
+        try:
+            # Try to handle numeric searches
+            numeric_query = Decimal(search_query)
+            numeric_filters = Q(shipping_fee=numeric_query) | Q(grand_total=numeric_query)
+        except (ValueError, InvalidOperation):
+            numeric_filters = Q()  # No numeric filters if conversion fails
+
+        # Text search filters
+        text_filters = Q(
+            order_number__icontains=search_query) | \
+            Q(user__username__icontains=search_query) | \
+            Q(payment_method__icontains=search_query) | \
+            Q(payment_status__icontains=search_query) | \
+            Q(status__icontains=search_query)
+        
+        address_filters = Q(
+            address__first_name__icontains=search_query) | \
+            Q(address__last_name__icontains=search_query) | \
+            Q(address__street_address__icontains=search_query) | \
+            Q(address__city__icontains=search_query) | \
+            Q(address__state__icontains=search_query) | \
+            Q(address__country__icontains=search_query) | \
+            Q(address__postal_code__icontains=search_query)
+        
+        order_list = Order.objects.filter(
+            text_filters | numeric_filters | address_filters
+        ).order_by('-created_at')
+    else:
+        order_list = Order.objects.all().order_by('-created_at')
+
+    paginator = Paginator(order_list, 6)  # Show 6 orders per page
+
+    page = request.GET.get('page')
+    try:
+        orders = paginator.page(page)
+    except PageNotAnInteger:
+        orders = paginator.page(1)
+    except EmptyPage:
+        orders = paginator.page(paginator.num_pages)
+
+    context = {
+        'orders': orders,
+        'search_query': search_query,
+    }
+    return render(request, 'admin_side/order_list.html', context)
 
 @require_POST
 def update_order_status(request):
@@ -251,11 +314,9 @@ def update_order_status(request):
         if new_status == 'Cancelled':
             # Handle cancellation logic, e.g., refunds, inventory updates, etc.
             pass
-        elif new_status == 'Delivered' and order.payment_method == 'COD':
+        elif new_status == 'Ordered' and order.payment_method == 'COD':
             # Handle logic for delivered status, e.g., payment confirmation
-            if order.status == 'Ordered' and order.payment_method == 'COD':
-                order.payment_status='Completed'
-            pass
+            new_status = 'Completed'
         order.status = new_status
         order.save()
     return redirect('order_list')
@@ -295,6 +356,8 @@ def wishlist(request):
     }
     return render(request, 'user/wishlist.html', context)
 
+
+
 def remove_from_wishlist(request, item_id):
     if request.method == 'POST':
         # Get the wishlist item for the current user
@@ -305,3 +368,21 @@ def remove_from_wishlist(request, item_id):
     else:
         messages.error(request, "Invalid request method.", extra_tags='wishlist')
     return redirect('wishlist')
+
+def toggle_wishlist(request, product_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'You need to be logged in to add items to your wishlist.'}, status=403)
+
+    product = get_object_or_404(Product, id=product_id)
+    wishlist_item = Wishlist.objects.filter(user=request.user, product=product).first()
+
+    if wishlist_item:
+        # Product is already in the wishlist, so remove it
+        wishlist_item.delete()
+        message = 'Product removed from your wishlist.'
+    else:
+        # Product is not in the wishlist, so add it
+        Wishlist.objects.create(user=request.user, product=product)
+        message = 'Product added to your wishlist.'
+
+    return JsonResponse({'success': True, 'message': message})

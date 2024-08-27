@@ -3,12 +3,34 @@ from accounts.models import Account
 from .forms import UserCreationForm
 from .forms import UserEditForm
 from django.contrib import messages
+from django.db.models import Q
+from django.core.paginator import Paginator
 
 
 # Create your views here.
 def user_list(request):
-    users = Account.objects.all()
-    return render(request,'admin_side/user_list.html',{'users': users})
+    search_query = request.GET.get('search', '')
+    if search_query:
+        users = Account.objects.filter(
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(username__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(phone_number__icontains=search_query)
+        )
+    else:
+        users = Account.objects.all()
+
+    # Pagination
+    paginator = Paginator(users, 6)  # Show 6 users per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'page_obj': page_obj,
+        'search_query': search_query,
+    }
+    return render(request, 'admin_side/user_list.html', context)
 
 
 def user_delete(request, user_id):

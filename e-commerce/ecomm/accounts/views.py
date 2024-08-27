@@ -23,6 +23,8 @@ from decimal import Decimal
 from django.db.models.functions import TruncDay, TruncMonth, TruncYear
 from django.db.models import Count, Sum
 import calendar
+from django.db.models import Q
+from django.core.paginator import Paginator
 
 def login_page(request):
     # Check if the user is already authenticated
@@ -235,6 +237,21 @@ def admin_products(request):
     sizes = Size.objects.all()
     colors = Color.objects.all()
 
+    search_query = request.GET.get('search', '')
+    if search_query:
+        products = products.filter(
+            Q(title__icontains=search_query) |
+            Q(original_price__icontains=search_query) |
+            Q(product_offer__icontains=search_query) |
+            Q(category__category_name__icontains=search_query) |
+            Q(brand__brand_name__icontains=search_query)
+        )
+
+    # Pagination
+    paginator = Paginator(products, 6)  # Show 6 products per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     if request.method == 'POST':
         category_form = CategoryForm(request.POST)
         brand_form = BrandForm(request.POST)
@@ -266,7 +283,7 @@ def admin_products(request):
         color_form = ColorForm()
 
     context = {
-        'products': products,
+        'page_obj': page_obj,
         'categories': categories,
         'brands': brands,
         'sizes': sizes,
@@ -275,6 +292,7 @@ def admin_products(request):
         'brand_form': brand_form,
         'size_form': size_form,
         'color_form': color_form,
+        'search_query': search_query,
     }
     return render(request, 'admin_side/admin_products.html', context)
 

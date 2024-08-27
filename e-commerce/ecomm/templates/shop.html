@@ -1,8 +1,25 @@
 {% extends "base.html" %}
 {% load static %}
 {% load chunks %}
+<style>
+    .add-to-wishlist {
+        color: #999; /* Default color for inactive state */
+        font-size: 20px;
+        cursor: pointer;
+        transition: color 0.3s;
+    }
+    
+    .add-to-wishlist.active {
+        color: #e74c3c; /* Color for active state */
+    }
+    
+    .add-to-wishlist:hover {
+        color: #c0392b; /* Color on hover */
+    }
+</style>    
 
 {% block content %}
+
 
 <div class="bg-light py-3">
     <div class="container">
@@ -107,8 +124,13 @@
                                     <p class="text-danger font-weight-bold">Out of Stock</p>
                                     {% endif %}
                                     <!-- Wishlist Button -->
-                                    <a href="{% url 'add_to_wishlist' product.id %}" class="btn btn-outline-danger btn-sm add-to-wishlist" title="Add to Wishlist" data-product-id="{{ product.id }}">
-                                        <i class="fa fa-heart"></i>
+                                    <a href="{% url 'toggle_wishlist' product.id %}" 
+                                        class="btn btn-outline-danger btn-sm add-to-wishlist" 
+                                        title="Add to Wishlist" 
+                                        data-product-id="{{ product.id }}" 
+                                        data-add-url="{% url 'toggle_wishlist' product.id %}" 
+                                        data-remove-url="{% url 'toggle_wishlist' product.id %}">
+                                            <i class="fa fa-heart"></i>
                                     </a>
                                     <div class="wishlist-message"></div>
                                 </div>
@@ -227,52 +249,96 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const buttons = document.querySelectorAll('.add-to-wishlist');
+    document.addEventListener('DOMContentLoaded', function () {
+        const buttons = document.querySelectorAll('.add-to-wishlist');
 
-    buttons.forEach(button => {
-        button.addEventListener('click', function (event) {
-            event.preventDefault();
+        // Function to update the wishlist icon state based on local storage
+        function updateWishlistState() {
+            buttons.forEach(button => {
+                const productId = button.getAttribute('data-product-id');
+                const isInWishlist = localStorage.getItem(`wishlist_${productId}`) === 'true';
+                button.classList.toggle('active', isInWishlist);
+            });
+        }
 
-            const button = event.currentTarget;
-            const productId = button.getAttribute('data-product-id');
-            const productItem = button.closest('.product-item');
+        // Function to check if wishlist state should be refreshed based on URL parameters
+        function checkForWishlistRefresh() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('wishlist_updated') === 'true') {
+                updateWishlistState();
+                history.replaceState(null, '', window.location.pathname); // Remove the query parameter
+            }
+        }
 
-            // Toggle the 'active' class to change the icon color
-            button.classList.toggle('active');
+        // Initialize wishlist state and check URL parameters
+        updateWishlistState();
+        checkForWishlistRefresh();
 
-            // Optionally: Make an AJAX request to add/remove the item from the wishlist
-            fetch(button.href, { method: 'GET' })
-                .then(response => response.json())
-                .then(data => {
-                    let messageElement = productItem.querySelector('.wishlist-message');
-                    if (!messageElement) {
-                        messageElement = document.createElement('div');
-                        messageElement.className = 'wishlist-message alert';
-                        productItem.appendChild(messageElement);
-                    }
+        buttons.forEach(button => {
+            button.addEventListener('click', function (event) {
+                event.preventDefault();
 
-                    if (data.success) {
-                        messageElement.classList.remove('alert-danger');
-                        messageElement.classList.add('alert-success');
-                        messageElement.textContent = 'Product added to your wishlist.';
-                    } else {
-                        messageElement.classList.remove('alert-success');
-                        messageElement.classList.add('alert-danger');
-                        messageElement.textContent = 'Product already added to the wishlist';
-                    }
+                const button = event.currentTarget;
+                const productId = button.getAttribute('data-product-id');
+                const isActive = button.classList.contains('active');
+                const url = isActive ? button.dataset.removeUrl : button.dataset.addUrl;
 
-                    // Hide the message after 3 seconds
-                    setTimeout(() => {
-                        messageElement.remove();
-                    }, 2000);
-                })
-                .catch(error => {
-                    // Handle errors
-                    console.error('Error:', error);
-                });
+                // Toggle the 'active' class and update localStorage
+                button.classList.toggle('active');
+
+                // Make AJAX request to add/remove item from the wishlist
+                fetch(url, { method: 'GET' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update localStorage with new state
+                            localStorage.setItem(`wishlist_${productId}`, !isActive);
+
+                            // Show success message
+                            let messageElement = button.closest('.product-item').querySelector('.wishlist-message');
+                            if (!messageElement) {
+                                messageElement = document.createElement('div');
+                                messageElement.className = 'wishlist-message alert';
+                                button.closest('.product-item').appendChild(messageElement);
+                            }
+
+                            messageElement.classList.remove('alert-danger', 'alert-success');
+                            messageElement.classList.add('alert-success');
+                            messageElement.textContent = data.message;
+
+                            // Hide the message after 2 seconds
+                            setTimeout(() => {
+                                messageElement.remove();
+                            }, 2000);
+                        } else {
+                            // Revert button state and show error message
+                            button.classList.toggle('active', isActive);
+                            localStorage.setItem(`wishlist_${productId}`, isActive);
+
+                            let messageElement = button.closest('.product-item').querySelector('.wishlist-message');
+                            if (!messageElement) {
+                                messageElement = document.createElement('div');
+                                messageElement.className = 'wishlist-message alert';
+                                button.closest('.product-item').appendChild(messageElement);
+                            }
+
+                            messageElement.classList.remove('alert-success', 'alert-danger');
+                            messageElement.classList.add('alert-danger');
+                            messageElement.textContent = data.message;
+
+                            // Hide the message after 2 seconds
+                            setTimeout(() => {
+                                messageElement.remove();
+                            }, 2000);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            });
         });
     });
-});
 </script>
 {% endblock %}
+
+

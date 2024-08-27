@@ -88,9 +88,42 @@
 .filter-form label {
     margin-right: 1rem;
 }
+
+/* Pagination controls */
+.pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+}
+
+.page-item {
+    margin: 0 0.5rem;
+}
+
+.page-item a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.page-item.active a {
+    font-weight: bold;
+}
+
+.page-item.disabled a {
+    color: #6c757d;
+    cursor: not-allowed;
+}
 </style>
 
 <div class="container mt-5">
+    <form method="get" class="mb-4">
+        <div class="input-group">
+            <input type="text" name="search" value="{{ search_query }}" class="form-control" placeholder="Search by name or code">
+            <div class="input-group-append">
+                <button class="btn btn-secondary" type="submit">Search</button>
+            </div>
+        </div>
+    </form>
     <!-- Filter Form -->
     <div class="filter-form">
         <h4>Filter Sales Report</h4>
@@ -113,6 +146,7 @@
                 <label for="end_date" class="text-dark">End Date:</label>
                 <input type="date" id="end_date" name="end_date" class="form-control" value="{{ request.GET.end_date }}">
             </div>
+
 
             <button type="submit" class="btn btn-primary">Apply Filter</button>
         </form>
@@ -179,6 +213,21 @@
                     {% endfor %}
                 </tbody>
             </table>
+
+            <!-- Pagination Controls -->
+            <div class="pagination">
+                <span class="page-item {% if not orders.has_previous %}disabled{% endif %}">
+                    <a href="?{% if orders.has_previous %}page={{ orders.previous_page_number }}&{% endif %}{{ request.GET.urlencode }}">Previous</a>
+                </span>
+                {% for page_num in orders.paginator.page_range %}
+                    <span class="page-item {% if orders.number == page_num %}active{% endif %}">
+                        <a href="?page={{ page_num }}&{{ request.GET.urlencode }}">{{ page_num }}</a>
+                    </span>
+                {% endfor %}
+                <span class="page-item {% if not orders.has_next %}disabled{% endif %}">
+                    <a href="?{% if orders.has_next %}page={{ orders.next_page_number }}&{% endif %}{{ request.GET.urlencode }}">Next</a>
+                </span>
+            </div>
         </div>
     </div>
 </div>
