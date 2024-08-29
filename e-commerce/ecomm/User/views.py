@@ -14,7 +14,7 @@ from products.models import Order, OrderItem, Product
 from django.views.decorators.http import require_POST
 from django.db.models import Count
 from django.core.exceptions import MultipleObjectsReturned
-from wallet.models import CancellationRequest, WalletTransaction
+from wallet.models import CancellationRequest, ReturnRequest, WalletTransaction
 from django.db.models import Q  
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from decimal import Decimal, InvalidOperation
@@ -83,7 +83,8 @@ def add_address(request):
     else:
         form = AddressForm()
     
-    return render(request, 'user/add_address.html', {'form': form})
+    return render(request, 'user/add_address.html', {'form': form, 'redirect_url': redirect_url})
+
 
 
 
@@ -251,6 +252,8 @@ def cancel_order(request, order_number):
 
 def order_list(request):
     search_query = request.GET.get('search', '')
+    cancellation_requests = CancellationRequest.objects.all()
+    return_requests = ReturnRequest.objects.all()
 
     if search_query:
         try:
@@ -296,8 +299,22 @@ def order_list(request):
     context = {
         'orders': orders,
         'search_query': search_query,
+        'cancellation_requests': cancellation_requests,
+        'return_requests': return_requests,
     }
     return render(request, 'admin_side/order_list.html', context)
+
+
+def order_detail_view(request, order_number):
+    order = get_object_or_404(Order, order_number=order_number)
+    cancellation_request = CancellationRequest.objects.filter(order=order).first()
+    return_request = ReturnRequest.objects.filter(order=order).first()
+    context = {
+        'order': order,
+        'cancellation_request': cancellation_request,
+        'return_request': return_request,
+    }
+    return render(request, 'admin_side/order_detail.html', context)
 
 @require_POST
 def update_order_status(request):

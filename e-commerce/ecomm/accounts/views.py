@@ -218,7 +218,7 @@ def admin_dashboard(request):
         'total_orders': total_orders,
         'active_users': active_users,
         'total_products': total_products,
-         'delivered_orders': delivered_orders,
+        'delivered_orders': delivered_orders,
         'shipped_orders': shipped_orders,
         'cancelled_orders': cancelled_orders,
         'returned_orders': returned_orders,

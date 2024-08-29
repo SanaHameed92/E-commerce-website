@@ -69,7 +69,7 @@ def admin_confirm_return(request, return_request_id):
                 # Record the wallet transaction
                 WalletTransaction.objects.create(
                     user=user,
-                    amount=order.grand_total,
+                    amount=refund_amount,
                     transaction_type='Credit',
                     description=f'Refund for order {order.order_number}'
                 )
@@ -88,7 +88,7 @@ def admin_confirm_return(request, return_request_id):
     else:
         messages.error(request, 'Return request cannot be confirmed.', extra_tags='order_detail')
 
-    return redirect('admin_return_requests') 
+    return redirect('order_detail_view', order_number=order.order_number) 
 
 def admin_reject_return(request, return_request_id):
     return_request = get_object_or_404(ReturnRequest, id=return_request_id)
@@ -174,17 +174,17 @@ def process_cancellation_request(request, request_id, action):
     order = cancellation_request.order
 
     if action == 'approve':
+        # Update order and cancellation request statuses
         order.status = 'Cancelled'
         order.payment_status = 'Refunded'
-        cancellation_request.status ="Confirmed"
-        order.save()
-
+        cancellation_request.status = 'Confirmed'
+        
         # Restore product quantities
         for item in order.items.all():
             product = item.product
             product.quantity += item.quantity
             product.save()
-
+        
         # Process the wallet refund
         user = order.user
         user.wallet += order.grand_total
@@ -203,7 +203,7 @@ def process_cancellation_request(request, request_id, action):
         cancellation_request.status = 'Rejected'
         messages.success(request, "Cancellation request rejected.")
     
-    cancellation_request.status = action.capitalize()
+    # Save the updated cancellation request status
     cancellation_request.save()
 
     # Store details in the session to display after redirect
@@ -215,7 +215,8 @@ def process_cancellation_request(request, request_id, action):
         'reason': cancellation_request.reason,
     }
 
-    return redirect('review_cancellation_requests')
+    # Redirect to the order detail page
+    return redirect('order_detail_view', order_number=order.order_number)
 
 
 @require_POST

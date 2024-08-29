@@ -283,8 +283,7 @@
                 const isActive = button.classList.contains('active');
                 const url = isActive ? button.dataset.removeUrl : button.dataset.addUrl;
 
-                // Toggle the 'active' class and update localStorage
-                button.classList.toggle('active');
+              
 
                 // Make AJAX request to add/remove item from the wishlist
                 fetch(url, { method: 'GET' })
