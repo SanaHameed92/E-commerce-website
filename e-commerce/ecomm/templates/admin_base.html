@@ -75,12 +75,7 @@
                                 Return Requests
                             </a>
                         </li>
-                        <li class="nav-item {% if request.path == '/admin/order-cancellations/' %}active{% endif %}">
-                            <a class="nav-link" href="{% url 'review_cancellation_requests' %}">
-                                <i class="fas fa-ban"></i> <!-- Icon for Order Cancellation -->
-                                Order Cancellations
-                            </a>
-                        </li>
+                        
                         <li class="nav-item {% if request.path == '/products/variants/' %}active{% endif %}">
                             <a class="nav-link" href="{% url 'product_page:list_product_variants' %}">
                                 <i class="fas fa-cogs"></i> <!-- Icon for Product Variants -->

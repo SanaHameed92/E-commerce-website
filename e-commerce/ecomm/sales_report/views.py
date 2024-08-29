@@ -31,14 +31,15 @@ def sale_report_view(request):
     elif filter_option == 'weekly':
         start_of_week = timezone.now().date() - timedelta(days=timezone.now().weekday())
         orders_query = orders_query.filter(created_at__date__gte=start_of_week)
+        print("Weekly filter applied:", orders_query.count())
     elif filter_option == 'monthly':
         start_of_month = timezone.now().date().replace(day=1)
         orders_query = orders_query.filter(created_at__date__gte=start_of_month)
+        print("Monthly filter applied:", orders_query.count())
     elif filter_option == 'yearly':
         start_of_year = timezone.now().date().replace(month=1, day=1)
         orders_query = orders_query.filter(created_at__date__gte=start_of_year)
-    elif filter_option == 'custom' and start_date and end_date:
-        orders_query = orders_query.filter(created_at__date__range=[start_date, end_date])
+        print("Yearly filter applied:", orders_query.count())
 
     # Search functionality
     if search_query:
@@ -54,6 +55,7 @@ def sale_report_view(request):
             Q(status__icontains=search_query) |
             Q(payment_method__icontains=search_query)
         ).distinct()
+    
     # Calculate overall statistics before pagination
     overall_sales_count = orders_query.count()
     overall_success_amount = orders_query.filter(status='Delivered').aggregate(Sum('grand_total'))['grand_total__sum'] or 0
@@ -75,8 +77,18 @@ def sale_report_view(request):
     return_request_count = orders_query.filter(return_request__status='Requested').count()
     in_progress_count = orders_query.filter(status='Ordered').count()
 
+    # Sales data for chart
+    sales_data = orders_query.values('created_at__date').annotate(
+        total_sales=Sum('grand_total')
+    ).order_by('created_at__date')
+    
+    # Generate chart data based on sales_data
+    chart_labels = [data['created_at__date'].strftime('%Y-%m-%d') for data in sales_data]
+    chart_data = [data['total_sales'] or 0 for data in sales_data]  # Ensure no None values in data
+    chart_data = [float(value) for value in chart_data]
+
     # Pagination
-    paginator = Paginator(orders_query, 3)  # Show 10 orders per page
+    paginator = Paginator(orders_query, 3)  # Show 3 orders per page
     page_number = request.GET.get('page')
     orders = paginator.get_page(page_number)
 
@@ -91,6 +103,8 @@ def sale_report_view(request):
         'return_request_count': return_request_count,
         'in_progress_count': in_progress_count,
         'search_query': search_query,
+        'chart_labels': chart_labels,
+        'chart_data': chart_data,
     }
 
     return render(request, 'admin_side/sales_report.html', context)
