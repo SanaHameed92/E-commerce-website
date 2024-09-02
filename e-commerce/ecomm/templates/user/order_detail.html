@@ -224,13 +224,20 @@
 
     /* New styles for payment pending message */
     .payment-status-container {
-        margin-top: 10px;
+        display: flex;
+        justify-content: ; /* Center horizontally */
+        align-items: center; /* Center vertically */
+        margin: 20px 0; /* Space above and below */
     }
-
+    
     .payment-status {
-        color: #dc3545; /* Red color */
-        font-size: 1.1rem;
-        font-weight: bold;
+        font-size: 1.5rem; /* Adjust font size */
+        font-weight: bold; /* Make the text bold */
+        color: #007bff; /* Blue color for the payment status */
+        padding: 10px 20px; /* Add padding */
+        border: 2px solid #007bff; /* Blue border */
+        border-radius: 5px; /* Rounded corners */
+        background-color: #f0f8ff; /* Light background color */
     }
 
     .payment-success-container {
@@ -285,9 +292,7 @@
 .coupon-info {
     margin-top: 20px;
     padding: 15px;
-    background-color: #e9ecef;
-    border: 1px solid #ced4da;
-    border-radius: 5px;
+   
     color: #495057;
     font-size: 1rem;
 }
@@ -300,6 +305,7 @@
 
 .coupon-info p {
     margin: 5px 0;
+
 }
 .continue-payment-label {
     display: block; /* Ensure the span is on its own line */
@@ -309,6 +315,18 @@
     font-weight: bold; /* Make the text bold */
     color: #333; /* Dark color for the text */
     text-align: center; /* Center the text */
+}
+.shipping-address-container {
+    margin-right: 0; /* Optional: remove right margin if needed */
+    padding: 10px; /* Optional: add padding around the address */
+    background-color:#e5eaf5; /* Optional: background color for better visibility */
+    border: 1px solid #ddd; /* Optional: border for better separation */
+    border-radius: 5px; /* Optional: rounded corners */
+    max-width: 100%; /* Ensure the width is responsive */
+}
+
+.text-md-right {
+    text-align: right; /* Align the text to the right on medium and larger screens */
 }
 
 
@@ -366,16 +384,6 @@
                     <button type="submit" class="btn btn-success">Submit Return Request</button>
                 </form>
             {% endif %}
-            <!-- Display coupon applied information -->
-            {% if order.coupon %}
-            <div class="coupon-info">
-                <h4>Applied Coupon:</h4>
-                <p>Coupon Code: {{ order.coupon.code }}</p>
-                <p>Discount: {{ order.coupon.discount|floatformat:2 }}%</p>
-                <p>Amount Saved: Rs{{ amount_saved|floatformat:2 }}</p>
-            </div>
-            {% endif %}
-
             
             
 
@@ -393,12 +401,34 @@
         
         <p>Total: Rs{{ order.grand_total|floatformat:2 }}</p>
         <p>Payment Method: {{ order.payment_method }}</p>
-        <p>Payment Status: {{ order.payment_status }}</p> 
+        <div class="payment-status-container">
+            <p>Payment Status : </p>
+            <p class="payment-status">{{ order.payment_status }}</p>
+        </div>
 
-        <h4>Shipping Address:</h4>
-        <p>Name: {{ order.address.first_name }} {{ order.address.last_name }}</p>
-        <p>Address: {{ order.address.street_address }}, {{ order.address.city }}, {{ order.address.state }}, {{ order.address.country }} - {{ order.address.postal_code }}</p>
-        <p>Phone: {{ order.address.phone_number }}</p>
+        <div class="row">
+            <!-- Shipping Address Details -->
+            <div class="col-md-6 shipping-address-container">
+                <h4>Shipping Address:</h4>
+                <p>Name: {{ order.address.first_name }} {{ order.address.last_name }}</p>
+                <p>Address: {{ order.address.street_address }}, {{ order.address.city }}, {{ order.address.state }}, {{ order.address.country }} - {{ order.address.postal_code }}</p>
+                <p>Phone: {{ order.address.phone_number }}</p>
+            </div>
+        
+            <!-- Coupon Information -->
+            <div class="col-md-6 text-md-right">
+                {% if order.coupon %}
+                <div class="coupon-info">
+                    <h4>Applied Coupon:</h4>
+                    <p><strong>Coupon Code:</strong> {{ order.coupon.code }}</p>
+                    <p><strong>Discount:</strong> {{ order.coupon.discount|floatformat:2 }}%</p>
+                    <p><strong>Amount Saved:</strong> Rs{{ amount_saved|floatformat:2 }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+
 
 
 

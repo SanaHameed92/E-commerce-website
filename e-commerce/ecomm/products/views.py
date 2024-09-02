@@ -608,10 +608,7 @@ def order_success(request, order_number):
     order = get_object_or_404(Order, order_number=order_number)
 
 
-    if order.payment_method == 'RazorPay' and order.payment_status == 'Pending':
-            order.status = 'Ordered'
-            order.payment_status = 'Completed'
-            order.save()
+    
 
     # Update the payment status to completed and order status to ordered if necessary
     # if order.payment_status == 'Pending':
@@ -643,6 +640,12 @@ def order_success(request, order_number):
 def order_success_after_failure(request, order_number):
     # Fetch the order using the order_number
     order = get_object_or_404(Order, order_number=order_number)
+
+    if order.payment_method == 'RazorPay' and order.payment_status == 'Pending':
+            order.status = 'Ordered'
+            order.payment_status = 'Completed'
+            order.save()
+
     
     # Ensure the order was pending and now update to completed
     if order.payment_method == 'COD' and order.payment_status == 'Pending':

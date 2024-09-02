@@ -334,6 +334,8 @@ def update_order_status(request):
         elif new_status == 'Ordered' and order.payment_method == 'COD':
             # Handle logic for delivered status, e.g., payment confirmation
             new_status = 'Completed'
+        elif new_status == 'Delivered' and order.payment_method == 'COD':
+            order.payment_status = 'Completed'
         order.status = new_status
         order.save()
     return redirect('order_list')
