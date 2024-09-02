@@ -575,6 +575,7 @@ def verify_otp(request, user_id, scenario):
                 user.otp = None
                 user.is_active = True
                 user.save()
+                
                 if scenario == 'signup':
                     user.backend = 'django.contrib.auth.backends.ModelBackend'  # Set the authentication backend
                     auth_login(request, user)
