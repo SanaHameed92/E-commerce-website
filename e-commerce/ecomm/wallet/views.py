@@ -177,6 +177,7 @@ def process_cancellation_request(request, request_id, action):
         # Update order and cancellation request statuses
         order.status = 'Cancelled'
         order.payment_status = 'Refunded'
+        order.save()
         cancellation_request.status = 'Confirmed'
         
         # Restore product quantities
