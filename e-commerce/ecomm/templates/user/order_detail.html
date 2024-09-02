@@ -338,24 +338,27 @@
         <div class="order-detail-actions">
             {% if order.status == 'Delivered' %}
                 <a href="{% url 'generate_invoice' order_number=order.order_number %}" class="invoice-button">Download Invoice</a>
+            {% elif order.status == 'Cancelled' %}
+                <div class="cancellation-status accepted">
+                    <h4>Order Cancelled</h4>
+                    <p>Your order was cancelled. The refund has been processed to your wallet.</p>
+                </div>
             {% elif order.payment_method == 'COD' and order.status == 'Ordered' %}
-                {% if order.payment_status == 'Completed'%}
-                <!-- Payment is considered successful for COD orders with Ordered status -->
+                {% if order.payment_status == 'Completed' %}
                     <div class="payment-success-container">
-                        <span class="payment-success">Payment Successful  !</span>
+                        <span class="payment-success">Payment Successful!</span>
                         <a href="{% url 'generate_invoice' order_number=order.order_number %}" class="invoice-button">Download Invoice</a>
                     </div>
-                {% elif order.payment_status == 'Pending'%}
-                <span class="continue-payment-label">Continue Payment with</span>
-                <a href="#" id="continue-payment-btn" class="continue-button">Razorpay</a>
-                <a href="#" id="wallet-payment-btn" class="wallet-button">Wallet</a>
-                <div class="payment-status-container">
-                    <span class="payment-status">{{ order.payment_status }}</span>
-                </div>
-                {%endif%}
+                {% elif order.payment_status == 'Pending' %}
+                    <span class="continue-payment-label">Continue Payment with</span>
+                    <a href="#" id="continue-payment-btn" class="continue-button">Razorpay</a>
+                    <a href="#" id="wallet-payment-btn" class="wallet-button">Wallet</a>
+                    <div class="payment-status-container">
+                        <span class="payment-status">{{ order.payment_status }}</span>
+                    </div>
+                {% endif %}
             {% elif order.payment_method == 'RazorPay' %}
                 {% if order.status == 'Pending' %}
-                    <!-- Payment is pending for RazorPay orders with pending status -->
                     <span class="continue-payment-label">Continue Payment with</span>
                     <a href="#" id="continue-payment-btn" class="continue-button">Razorpay</a>
                     <a href="#" id="wallet-payment-btn" class="wallet-button">Wallet</a>
@@ -363,31 +366,12 @@
                         <span class="payment-status">{{ order.payment_status }}</span>
                     </div>
                 {% elif order.status == 'Ordered' %}
-                    <!-- Payment should be completed if RazorPay order status is ordered -->
                     <div class="payment-success-container">
                         <span class="payment-success">Payment Successful!</span>
                         <a href="{% url 'generate_invoice' order_number=order.order_number %}" class="invoice-button">Download Invoice</a>
                     </div>
                 {% endif %}
-            {% elif order.payment_status == 'Completed' %}
-                <div class="payment-success-container">
-                    <span class="payment-success">Payment Successful!</span>
-                    <a href="{% url 'generate_invoice' order_number=order.order_number %}" class="invoice-button">Download Invoice</a>
-                </div>
             {% endif %}
-
-            {% if order.status == 'Delivered' and not order.return_request %}
-                <a href="#" id="request-return-btn" class="return-button">Request Return</a>
-                <form action="{% url 'request_return' order_number=order.order_number %}" method="post" id="return-request-form" class="hidden p-2">
-                    {% csrf_token %}
-                    <textarea id="reason-textarea" name="reason" rows="4" placeholder="Enter reason for return..." required></textarea>
-                    <button type="submit" class="btn btn-success">Submit Return Request</button>
-                </form>
-            {% endif %}
-            
-            
-
-            
         </div>
 
         
