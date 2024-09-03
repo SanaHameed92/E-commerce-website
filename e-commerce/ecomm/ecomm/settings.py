@@ -64,7 +64,7 @@ SOCIALACCOUNT_PROVIDERS = {
             'email'
         ],
         'AUTH_PARAMS':{"access_type":'online'},
-        'OAUTH_PKCE_ENABLED': True,
+        # 'OAUTH_PKCE_ENABLED': True,
     }
 }
 
@@ -119,8 +119,12 @@ AUTHENTICATION_BACKENDS = [
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'backendcourse',
+        'USER': 'mysuperuser',
+        'PASSWORD': 'mysuperuser',
+        'HOST': 'backendcourse.cxg60ae0q5er.us-east-1.rds.amazonaws.com',
+        'PORT': '5432',
     }
 }
 
