@@ -203,6 +203,7 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 
 RAZORPAY_API_KEY = 'rzp_test_Yl6grfBbwpSDvh'
 RAZORPAY_API_SECRET_KEY = '01h2uvlmHvVJROKnRboyx2pi'
+<<<<<<< HEAD
 
 
 AWS_ACCESS_KEY_ID='AKIA4ZPZU5WHH2PDNV43'
@@ -214,3 +215,5 @@ AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL =  None
 AWS_S3_VERITY = True
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+=======
+>>>>>>> 6e1ab59ed0ba79fdab2b9235aa1d17a248bcd70b
