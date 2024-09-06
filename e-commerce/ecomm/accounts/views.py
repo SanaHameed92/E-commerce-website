@@ -374,11 +374,10 @@ def toggle_brand_status(request, pk):
     brand.save()
     return redirect('admin_products')
 
-<<<<<<< HEAD
+
 
 @login_required
-=======
->>>>>>> 6e1ab59ed0ba79fdab2b9235aa1d17a248bcd70b
+
 def add_product(request):
     if request.method == 'POST':
         product_form = ProductForm(request.POST, request.FILES)
